@@ -64,8 +64,8 @@ export default function Home() {
           <button className="downloadBtn" disabled={loading}>{loading ? "Preparing…" : "Download"}</button>
         </form>
 
-        <div className="platforms">{platforms.map((p, i) => <span className={i === 0 ? "active" : ""} key={p}>{p}</span>)}</div>
-        <p className="microcopy">No account required • Public links only • Use content you have permission to download.</p>
+        <div className="platforms" aria-label="Supported platforms">{platforms.map(p => <span className="active" key={p}>{p}</span>)}</div>
+        <p className="microcopy">TikTok is fully connected now. Instagram, YouTube, Facebook and X are enabled in the interface and will use their dedicated providers as they become available. • Public links only • Use content you have permission to download.</p>
 
         {error && <div className="notice error">{error}</div>}
 
