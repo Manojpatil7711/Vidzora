@@ -22,26 +22,6 @@ const PLATFORM_HOSTS = {
 
 const MAX_URL_LENGTH = 2048;
 const REQUEST_TIMEOUT = 15000;
-const RATE_WINDOW_MS = 60_000;
-const RATE_LIMIT = 20;
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function getClientKey(req: Request) {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "anonymous";
-}
-
-function isRateLimited(key: string) {
-  const now = Date.now();
-  const current = rateBuckets.get(key);
-  if (!current || current.resetAt <= now) {
-    rateBuckets.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  if (current.count >= RATE_LIMIT) return true;
-  current.count += 1;
-  return false;
-}
-
 function detectPlatform(raw: string) {
   try {
     const u = new URL(raw);
@@ -154,11 +134,6 @@ async function callTikTokFallback(raw: string) {
 }
 
 export async function POST(req: Request) {
-  const rateKey = getClientKey(req);
-  if (isRateLimited(rateKey)) {
-    return NextResponse.json({ success: false, error: "Too many requests. Please try again in a minute." }, { status: 429, headers: { "Retry-After": "60" } });
-  }
-
   const contentType = req.headers.get("content-type") || "";
   if (!contentType.toLowerCase().includes("application/json")) {
     return NextResponse.json({ success: false, error: "JSON requests are required." }, { status: 415 });
