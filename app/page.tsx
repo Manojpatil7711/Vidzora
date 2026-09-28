@@ -1,104 +1,40 @@
 "use client";
 
-import { useState } from "react";
-
-type Format = { type: string; url: string; quality?: string };
-type Result = { platform: string; title?: string; thumbnail?: string; formats: Format[] };
+import { FormEvent, useState } from "react";
 
 const platforms = ["TikTok", "Instagram", "YouTube", "Facebook", "X"];
 
 export default function Home() {
-  const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [result, setResult] = useState<Result | null>(null);
+  const [url,setUrl]=useState(""); const [loading,setLoading]=useState(false); const [error,setError]=useState(""); const [result,setResult]=useState<any>(null);
 
-  async function download() {
-    setError("");
-    setResult(null);
-    const value = url.trim();
-    if (!value) return setError("Paste a video URL first.");
-    try { new URL(value); } catch { return setError("Please enter a valid URL."); }
-
-    setLoading(true);
-    try {
-      const res = await fetch("/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: value })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || "Unable to process this link.");
-      setResult(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
-    }
+  async function submit(e:FormEvent){ e.preventDefault(); setError(""); setResult(null); if(!url.trim()) return setError("Paste a public video URL first."); setLoading(true);
+    try { const r=await fetch("/api/download",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:url.trim()})}); const d=await r.json(); if(!r.ok||!d.success) throw new Error(d.error||"Unable to process this link."); setResult(d); } catch(err:any){setError(err.message||"Something went wrong.");} finally{setLoading(false);}
   }
-
-  return (
-    <main>
-      <header className="nav">
-        <div className="brand"><span className="brand-mark">V</span><span>Vidzora</span></div>
-        <a href="#how">How it works</a>
-      </header>
-
-      <section className="hero">
-        <div className="eyebrow">FAST • SIMPLE • MOBILE FIRST</div>
-        <h1>Download videos.<br /><span>Keep it simple.</span></h1>
-        <p className="sub">Paste a social video link and get your download in seconds.</p>
-
-        <div className="downloader">
-          <div className="input-wrap">
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && download()}
-              placeholder="Paste video URL here..."
-              inputMode="url"
-              autoComplete="off"
-              aria-label="Video URL"
-            />
-            {url && <button className="clear" onClick={() => { setUrl(""); setResult(null); setError(""); }} aria-label="Clear">×</button>}
-          </div>
-          <button className="download-btn" onClick={download} disabled={loading}>
-            {loading ? <><span className="spinner" /> Processing…</> : "Download"}
-          </button>
-        </div>
-        {error && <div className="error">{error}</div>}
-
-        <div className="platforms">
-          {platforms.map((p, i) => <span key={p} className={i === 0 ? "active-platform" : ""}>{p}</span>)}
-        </div>
-      </section>
-
-      {result && (
-        <section className="result-card">
-          <div className="result-head"><div><small>{result.platform}</small><h2>{result.title || "Your video is ready"}</h2></div></div>
-          <div className="formats">
-            {result.formats.map((f, i) => (
-              <a key={i} href={f.url} target="_blank" rel="noreferrer" className="format">
-                <span>{f.type}</span><strong>{f.quality || "Download"} ↗</strong>
-              </a>
-            ))}
-          </div>
-          <button className="another" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
-        </section>
-      )}
-
-      <section id="how" className="info">
-        <div><b>01</b><h3>Paste</h3><p>Copy a public video URL and paste it above.</p></div>
-        <div><b>02</b><h3>Process</h3><p>Vidzora detects the supported platform and prepares the media.</p></div>
-        <div><b>03</b><h3>Download</h3><p>Choose an available format and save your video.</p></div>
-      </section>
-
-      <section className="trust">
-        <h2>Built for speed. Designed for phones.</h2>
-        <p>No account. No download history. No unnecessary steps.</p>
-      </section>
-
-      <footer><span>© {new Date().getFullYear()} Vidzora</span><span>Use Vidzora only for content you have permission to download.</span></footer>
-    </main>
-  );
+  return <main>
+    <header className="nav"><a className="brand" href="/">Vidzora<span>•</span></a><nav><a href="#how">How it works</a><a href="#faq">FAQ</a></nav></header>
+    <section className="hero">
+      <div className="eyebrow">FAST • PRIVATE • SIMPLE</div>
+      <h1>Download social videos<br/><em>without the clutter.</em></h1>
+      <p className="sub">Paste a public video link. Vidzora detects the platform and prepares the available download formats.</p>
+      <form onSubmit={submit} className="search">
+        <div className="inputWrap"><span>↗</span><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="Paste a video URL…" aria-label="Video URL" inputMode="url"/>{url&&<button type="button" className="clear" onClick={()=>setUrl("")}>×</button>}</div>
+        <button className="downloadBtn" disabled={loading}>{loading?"Preparing…":"Download"}</button>
+      </form>
+      <div className="platforms">{platforms.map((p,i)=><span className={i===0?"active":""} key={p}>{p}</span>)}</div>
+      {error&&<div className="notice error">{error}</div>}
+      {result&&<div className="result">
+        <div className="resultHead"><div><small>{result.platform}</small><h2>{result.title||"Ready to download"}</h2></div></div>
+        <div className="formats">{result.formats?.map((f:any)=><a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="format"><span>{f.label}</span><b>Download ↘</b></a>)}</div>
+        <button className="again" onClick={()=>{setResult(null);setUrl("")}}>Download another</button>
+      </div>}
+    </section>
+    <section id="how" className="section"><div><div className="eyebrow">HOW IT WORKS</div><h2>Three steps. No account.</h2></div><div className="steps"><article><b>01</b><h3>Copy</h3><p>Copy the link to a public social video.</p></article><article><b>02</b><h3>Paste</h3><p>Paste it into Vidzora and let us detect the platform.</p></article><article><b>03</b><h3>Download</h3><p>Choose an available format and download.</p></article></div></section>
+    <section id="faq" className="section faq"><div><div className="eyebrow">FAQ</div><h2>Good to know.</h2></div><div>{[
+      ["Is Vidzora free?","Yes. The downloader is designed to be free to use."],
+      ["Do you save my videos?","Vidzora does not provide a personal video library or download history."],
+      ["Which links work?","Public links from supported platforms. Availability can change when platforms change their systems."],
+      ["Why can a link fail?","Private, deleted, region-restricted or unsupported links may not be downloadable."]
+    ].map(([q,a])=><details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div></section>
+    <footer><span>© {new Date().getFullYear()} Vidzora</span><span>Built for speed. Use responsibly.</span></footer>
+  </main>;
 }
