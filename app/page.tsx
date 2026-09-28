@@ -62,9 +62,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
-  const [adIndex, setAdIndex] = useState(0);
-  const [sponsorOpen, setSponsorOpen] = useState(false);
-  const [pendingDownloadUrl, setPendingDownloadUrl] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: FormEvent) {
@@ -91,16 +88,7 @@ export default function Home() {
 
   function startDownload(e: React.MouseEvent<HTMLAnchorElement>, targetUrl: string) {
     e.preventDefault();
-    setPendingDownloadUrl(targetUrl);
-    setSponsorOpen(true);
-  }
-
-  function continueDownload() {
-    if (!pendingDownloadUrl) return;
-    window.open(pendingDownloadUrl, "_blank", "noopener,noreferrer");
-    setPendingDownloadUrl("");
-    setSponsorOpen(false);
-    setAdIndex((i) => (i + 1) % sponsorLinks.length);
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -158,7 +146,7 @@ export default function Home() {
               </a>
             ))}
           </div>
-          <p className="microcopy downloadNote">Choose a quality to download. A sponsored offer may appear when you start a download.</p>
+          <p className="microcopy downloadNote">Choose a quality and download immediately.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
         </div>}
 
@@ -201,13 +189,6 @@ export default function Home() {
 
       <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
 
-      {sponsorOpen && (
-        <DownloadSponsorModal
-          href={sponsorLinks[adIndex]}
-          onContinue={continueDownload}
-          onClose={() => { setSponsorOpen(false); setPendingDownloadUrl(""); }}
-        />
-      )}
     </main>
   );
 }
