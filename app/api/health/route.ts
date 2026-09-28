@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const engineConfigured = Boolean(process.env.COBALT_API_URL?.trim());
+  const engineBase = process.env.COBALT_API_URL?.trim() || "https://cobalt-production-45cd.up.railway.app/";
+  const engineConfigured = Boolean(engineBase);
   return NextResponse.json({
     ok: true,
     service: "vidzora",
