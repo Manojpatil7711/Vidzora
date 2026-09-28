@@ -10,7 +10,26 @@ const PLATFORM_HOSTS = {
 } as const;
 
 const MAX_URL_LENGTH = 2048;
-const REQUEST_TIMEOUT = 15000;\nconst RATE_WINDOW_MS = 60_000;\nconst RATE_LIMIT = 20;\nconst rateBuckets = new Map<string, { count: number; resetAt: number }>();\n\nfunction getClientKey(req: Request) {\n  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "anonymous";\n}\n\nfunction isRateLimited(key: string) {\n  const now = Date.now();\n  const current = rateBuckets.get(key);\n  if (!current || current.resetAt <= now) {\n    rateBuckets.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });\n    return false;\n  }\n  if (current.count >= RATE_LIMIT) return true;\n  current.count += 1;\n  return false;\n}
+const REQUEST_TIMEOUT = 15000;
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 20;
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function getClientKey(req: Request) {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "anonymous";
+}
+
+function isRateLimited(key: string) {
+  const now = Date.now();
+  const current = rateBuckets.get(key);
+  if (!current || current.resetAt <= now) {
+    rateBuckets.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  if (current.count >= RATE_LIMIT) return true;
+  current.count += 1;
+  return false;
+}
 
 function detectPlatform(raw: string) {
   try {
