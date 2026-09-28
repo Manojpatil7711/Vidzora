@@ -1,30 +1,31 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const siteUrl = "https://vidzora.vercel.app";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://vidzora.vercel.app"),
-  title: {
-    default: "Vidzora — Fast Social Video Downloader",
-    template: "%s | Vidzora"
-  },
-  description: "Download social videos quickly with Vidzora. A clean, fast and mobile-first downloader.",
-  applicationName: "Vidzora",
-  keywords: ["video downloader", "TikTok downloader", "social media downloader", "Vidzora"],
+  metadataBase: new URL(siteUrl),
+  title: { default: "Vidzora — Fast Social Video Downloader", template: "%s | Vidzora" },
+  description: "Fast, simple social video downloader. Paste a public video link and get a downloadable result in seconds.",
+  keywords: ["video downloader","social video downloader","TikTok downloader","download videos online","Vidzora"],
   alternates: { canonical: "/" },
   openGraph: {
     title: "Vidzora — Fast Social Video Downloader",
-    description: "A clean, fast and mobile-first social video downloader.",
-    url: "/",
+    description: "Download public social videos with a fast, clean and mobile-first experience.",
+    url: siteUrl,
     siteName: "Vidzora",
-    type: "website"
+    type: "website",
   },
-  robots: { index: true, follow: true }
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
+  const jsonLd = {
+    "@context":"https://schema.org",
+    "@graph":[
+      {"@type":"WebSite","@id":siteUrl+"/#website","url":siteUrl,"name":"Vidzora","description":"Fast social video downloader."},
+      {"@type":"WebApplication","@id":siteUrl+"/#app","name":"Vidzora","url":siteUrl,"applicationCategory":"MultimediaApplication","operatingSystem":"Web","isAccessibleForFree":true}
+    ]
+  };
+  return <html lang="en"><body>{children}<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}} /></body></html>;
 }
