@@ -77,7 +77,7 @@ export default function Home() {
     const sponsor = sponsorLinks[adIndex % sponsorLinks.length];
     setAdIndex((i) => (i + 1) % sponsorLinks.length);
     window.open(sponsor, "_blank", "noopener,noreferrer");
-    window.location.href = targetUrl;
+    window.setTimeout(() => { window.location.href = targetUrl; }, 5000);
   }
 
   return (
@@ -137,7 +137,7 @@ export default function Home() {
               </a>
             ))}
           </div>
-          <p className="microcopy downloadNote">Choose a quality to download. A sponsor link may open in a separate tab to support free downloads.</p>
+          <p className="microcopy downloadNote">Choose a quality to download. A sponsor page opens in a separate tab; your download continues automatically after a short sponsor interval.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
         </div>}
 
