@@ -152,6 +152,22 @@ async function callTikTokFallback(raw: string) {
 }
 
 export async function POST(req: Request) {
+  const rateKey = getClientKey(req);
+  if (isRateLimited(rateKey)) {
+    return NextResponse.json(
+      { success: false, error: "Too many requests. Please try again in a minute." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    );
+  }
+
+  const contentType = req.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return NextResponse.json(
+      { success: false, error: "JSON requests are required." },
+      { status: 415 }
+    );
+  }
+
   try {
     const body = await req.json();
     const raw = typeof body?.url === "string" ? body.url.trim() : "";
