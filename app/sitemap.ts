@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const base = "https://vidzora.vercel.app";
+const base = "https://vidzora-pi.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
