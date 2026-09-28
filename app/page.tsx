@@ -2,7 +2,13 @@
 
 import { FormEvent, useRef, useState } from "react";
 
-const platforms = ["YouTube", "Instagram", "Facebook", "TikTok", "X"];
+const platforms = [
+  { name: "YouTube", url: "https://www.youtube.com/" },
+  { name: "Instagram", url: "https://www.instagram.com/" },
+  { name: "Facebook", url: "https://www.facebook.com/" },
+  { name: "TikTok", url: "https://www.tiktok.com/" },
+  { name: "X", url: "https://x.com/" }
+];
 
 const sponsorLinks = [
   "https://mergerindirect.com/kf1ujxf25k?key=258266315b32d7e7a6335f103ba86138",
@@ -28,7 +34,6 @@ export default function Home() {
     setResult(null);
     if (!url.trim()) return setError("Paste a public video URL first.");
     setLoading(true);
-
     try {
       const r = await fetch("/api/download", {
         method: "POST",
@@ -74,7 +79,19 @@ export default function Home() {
           <button className="downloadBtn" disabled={loading} type="submit">{loading ? "Preparing…" : "Download"}</button>
         </form>
 
-        <div className="platforms" aria-label="Supported platforms">{platforms.map(p => <span className="active" key={p}>{p}</span>)}</div>
+        <div className="platforms" aria-label="Supported platforms">
+          {platforms.map((p) => (
+            <button
+              className="active platformLink"
+              type="button"
+              key={p.name}
+              onClick={() => window.open(p.url, "_blank", "noopener,noreferrer")}
+              aria-label={`Open ${p.name}`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
         <p className="microcopy">YouTube, Instagram, Facebook, TikTok and X use a multi-provider adapter strategy. Provider availability can vary by platform and link type. • Public links only • Use content you have permission to download.</p>
 
         {error && <div className="notice error">{error}</div>}
@@ -83,7 +100,6 @@ export default function Home() {
           <div className="resultHead">
             <div><small>{result.platform}</small><h2>{result.title || "Ready to download"}</h2></div>
           </div>
-
           <div className="formats">
             {result.formats?.map((f: any) => (
               <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="format" onClick={(e) => startDownload(e, f.url)}>
@@ -91,9 +107,7 @@ export default function Home() {
               </a>
             ))}
           </div>
-
           <p className="microcopy downloadNote">Choose a quality to download. A sponsor link may open in a separate tab to support free downloads.</p>
-
           <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
         </div>}
 
