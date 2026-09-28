@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 
+const base = "https://vidzora.vercel.app";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://vidzora.vercel.app";
   return [
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    { url: base + "/#how", changeFrequency: "monthly", priority: 0.7 },
-    { url: base + "/#faq", changeFrequency: "monthly", priority: 0.6 }
+    { url: base + "/privacy", lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 },
+    { url: base + "/terms", lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 }
   ];
 }
