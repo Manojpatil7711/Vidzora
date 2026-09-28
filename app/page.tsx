@@ -22,6 +22,7 @@ const platforms = [
 ];
 
 const sponsorLinks = [
+  "https://omg10.com/4/11565407",
   "https://mergerindirect.com/kf1ujxf25k?key=258266315b32d7e7a6335f103ba86138",
   "https://mergerindirect.com/wh2w1pny3s?key=db5e91a9c2690a70a08a5c3f212d0792",
   "https://mergerindirect.com/bkgdinwpwf?key=42404284f875722fcb453dd529a77edf",
