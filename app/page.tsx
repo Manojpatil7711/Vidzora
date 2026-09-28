@@ -52,16 +52,16 @@ export default function Home() {
 
       <section className="hero">
         <div className="eyebrow">FAST • PRIVATE • SIMPLE</div>
-        <h1>Download social videos<br/><em>without the clutter.</em></h1>
+        <h1>Download social videos<br/><em>fast, clean, simple.</em></h1>
         <p className="sub">Paste a public video link. Vidzora detects the platform and prepares the available download formats.</p>
 
         <form onSubmit={submit} className="search">
           <div className="inputWrap">
             <span>↗</span>
-            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste a video URL…" aria-label="Video URL" inputMode="url"/>
+            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste a video URL…" aria-label="Video URL" inputMode="url" autoComplete="url" required/>
             {url && <button type="button" className="clear" onClick={() => setUrl("")}>×</button>}
           </div>
-          <button className="downloadBtn" disabled={loading}>{loading ? "Preparing…" : "Download"}</button>
+          <button className="downloadBtn" disabled={loading} type="submit">{loading ? "Preparing…" : "Download"}</button>
         </form>
 
         <div className="platforms" aria-label="Supported platforms">{platforms.map(p => <span className="active" key={p}>{p}</span>)}</div>
