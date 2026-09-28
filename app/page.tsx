@@ -73,11 +73,8 @@ export default function Home() {
   }
 
   function startDownload(e: React.MouseEvent<HTMLAnchorElement>, targetUrl: string) {
-    e.preventDefault();
-    const sponsor = sponsorLinks[adIndex % sponsorLinks.length];
     setAdIndex((i) => (i + 1) % sponsorLinks.length);
-    window.open(sponsor, "_blank", "noopener,noreferrer");
-    window.setTimeout(() => { window.location.href = targetUrl; }, 5000);
+    // Downloads start immediately. Sponsor links remain optional and separate from controls.
   }
 
   return (
@@ -130,6 +127,7 @@ export default function Home() {
           <div className="resultHead">
             <div><small>{result.platform}</small><h2>{result.title || "Ready to download"}</h2></div>
           </div>
+          <SponsorBanner href={sponsorLinks[2]} label="Sponsored offer" />
           <div className="formats">
             {result.formats?.map((f: any) => (
               <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="format" onClick={(e) => startDownload(e, f.url)}>
@@ -137,13 +135,15 @@ export default function Home() {
               </a>
             ))}
           </div>
-          <p className="microcopy downloadNote">Choose a quality to download. A sponsor page opens in a separate tab; your download continues automatically after a short sponsor interval.</p>
+          <p className="microcopy downloadNote">Choose a quality to download. Sponsored offers are optional and separate from the download controls.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
         </div>}
 
         <SponsorBanner href={sponsorLinks[1]} label="Sponsored offer" />
 
       </section>
+
+      <SponsorBanner href={sponsorLinks[3]} label="Sponsored offer" />
 
       <section id="how" className="section">
         <div><div className="eyebrow">HOW IT WORKS</div><h2>Three steps. No account.</h2></div>
@@ -154,6 +154,8 @@ export default function Home() {
         </div>
       </section>
 
+      <SponsorBanner href={sponsorLinks[4]} label="Sponsored offer" />
+
       <section className="section revenue">
         <div><div className="eyebrow">GROWTH ENGINE</div><h2>Built to scale with traffic.</h2></div>
         <div className="growthCards">
@@ -162,6 +164,8 @@ export default function Home() {
           <article><strong>03</strong><h3>Multiple revenue paths</h3><p>Download actions can monetize real user traffic without hiding the sponsor relationship.</p></article>
         </div>
       </section>
+
+      <SponsorBanner href={sponsorLinks[5]} label="Sponsored offer" />
 
       <section id="faq" className="section faq">
         <div><div className="eyebrow">FAQ</div><h2>Good to know.</h2></div>
@@ -175,6 +179,8 @@ export default function Home() {
           ].map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}
         </div>
       </section>
+
+      <SponsorBanner href={sponsorLinks[6]} label="Sponsored offer" />
 
       <footer><span>© {new Date().getFullYear()} Vidzora</span><span>Built for speed. Use responsibly.</span></footer>
     </main>
