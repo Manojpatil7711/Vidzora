@@ -1,13 +1,6 @@
 {
   "REPLACE-WITH-YOUR-UUID": {
     "name": "vidzora-production",
-    "limit": 30,
-    "allowedServices": [
-      "youtube",
-      "instagram",
-      "facebook",
-      "tiktok",
-      "twitter"
-    ]
+    "limit": 30
   }
 }
