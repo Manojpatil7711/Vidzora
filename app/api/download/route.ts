@@ -191,15 +191,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Provider chain: primary Cobalt instance -> secondary compatible instance -> TikTok fallback.
-    // Provider URLs and keys stay server-side in Vercel Environment Variables.
     const providers = [
       { base: process.env.COBALT_API_URL?.trim(), key: process.env.COBALT_API_KEY?.trim() },
       { base: process.env.SECONDARY_PROVIDER_URL?.trim(), key: process.env.SECONDARY_PROVIDER_API_KEY?.trim() }
     ].filter((p): p is { base: string; key?: string } => Boolean(p.base));
 
-    let result: Awaited<ReturnType<typeof callProvider>> = null;
+    type ProviderResult = Awaited<ReturnType<typeof callProvider>>;
+    let result: ProviderResult | null = null;
     let lastProviderError = "";
+
     for (const provider of providers) {
       try {
         result = await callProvider(raw, provider.base, provider.key);
