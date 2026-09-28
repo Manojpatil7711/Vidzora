@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
 const platforms = ["TikTok", "Instagram", "YouTube", "Facebook", "X"];
 
@@ -18,7 +18,7 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);\n  const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -58,8 +58,8 @@ export default function Home() {
         <form onSubmit={submit} className="search">
           <div className="inputWrap">
             <span>↗</span>
-            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste a video URL…" aria-label="Video URL" inputMode="url" autoComplete="url" required/>
-            {url && <button type="button" className="clear" onClick={() => setUrl("")}>×</button>}
+            <input ref={inputRef} value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste a video URL…" aria-label="Video URL" inputMode="url" autoComplete="url" required/>
+            {!url && <button type="button" className="pasteBtn" onClick={async () => { try { const text = await navigator.clipboard.readText(); if (text) { setUrl(text.trim()); inputRef.current?.focus(); } } catch { setError("Tap and hold the field, then choose Paste."); } }}>Paste</button>}\n            {url && <button type="button" className="clear" aria-label="Clear video URL" onClick={() => setUrl("")}>×</button>}
           </div>
           <button className="downloadBtn" disabled={loading} type="submit">{loading ? "Preparing…" : "Download"}</button>
         </form>
