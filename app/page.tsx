@@ -7,7 +7,18 @@ const platforms = [
   { name: "Instagram", url: "https://www.instagram.com/" },
   { name: "Facebook", url: "https://www.facebook.com/" },
   { name: "TikTok", url: "https://www.tiktok.com/" },
-  { name: "X", url: "https://x.com/" }
+  { name: "X", url: "https://x.com/" },
+  { name: "Reddit", url: "https://www.reddit.com/" },
+  { name: "Pinterest", url: "https://www.pinterest.com/" },
+  { name: "Vimeo", url: "https://vimeo.com/" },
+  { name: "Dailymotion", url: "https://www.dailymotion.com/" },
+  { name: "Twitch", url: "https://www.twitch.tv/" },
+  { name: "Snapchat", url: "https://www.snapchat.com/" },
+  { name: "Tumblr", url: "https://www.tumblr.com/" },
+  { name: "VK", url: "https://vk.com/" },
+  { name: "Streamable", url: "https://streamable.com/" },
+  { name: "SoundCloud", url: "https://soundcloud.com/" },
+  { name: "Rutube", url: "https://rutube.ru/" }
 ];
 
 const sponsorLinks = [
@@ -51,6 +62,7 @@ export default function Home() {
   }
 
   function startDownload(e: React.MouseEvent<HTMLAnchorElement>, targetUrl: string) {
+    e.preventDefault();
     const sponsor = sponsorLinks[adIndex % sponsorLinks.length];
     setAdIndex((i) => (i + 1) % sponsorLinks.length);
     window.open(sponsor, "_blank", "noopener,noreferrer");
@@ -67,7 +79,7 @@ export default function Home() {
       <section className="hero">
         <div className="eyebrow">FAST • PRIVATE • SIMPLE</div>
         <h1>Download social videos<br/><em>fast, clean, simple.</em></h1>
-        <p className="sub">Paste a public video link. Vidzora detects the platform and prepares the available download formats.</p>
+        <p className="sub">One downloader for public videos across major social and video platforms.</p>
 
         <form onSubmit={submit} className="search">
           <div className="inputWrap">
@@ -85,14 +97,19 @@ export default function Home() {
               className="active platformLink"
               type="button"
               key={p.name}
-              onClick={() => window.open(p.url, "_blank", "noopener,noreferrer")}
-              aria-label={`Open ${p.name}`}
+              onClick={() => {
+                setError("");
+                setUrl("");
+                inputRef.current?.focus();
+              }}
+              aria-label={`Paste a ${p.name} URL`}
+              title={`Paste a ${p.name} URL`}
             >
               {p.name}
             </button>
           ))}
         </div>
-        <p className="microcopy">YouTube, Instagram, Facebook, TikTok and X use a multi-provider adapter strategy. Provider availability can vary by platform and link type. • Public links only • Use content you have permission to download.</p>
+        <p className="microcopy">16 public media platforms detected by Vidzora. Actual download availability depends on the connected media engine and the source link. • Public links only • Use content you have permission to download.</p>
 
         {error && <div className="notice error">{error}</div>}
 
