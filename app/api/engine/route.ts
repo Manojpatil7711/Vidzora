@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const base = process.env.COBALT_API_URL?.trim();
+  const base = process.env.COBALT_API_URL?.trim() || "https://cobalt-production-45cd.up.railway.app/";
 
   if (!base) {
     return NextResponse.json({
