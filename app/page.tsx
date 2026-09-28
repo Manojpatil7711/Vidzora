@@ -2,7 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 
-const platforms = ["TikTok", "Instagram", "YouTube", "Facebook", "X"];
+const platforms = ["YouTube", "Instagram", "Facebook", "TikTok", "X"];
 
 const sponsorLinks = [
   "https://mergerindirect.com/kf1ujxf25k?key=258266315b32d7e7a6335f103ba86138",
@@ -75,7 +75,7 @@ export default function Home() {
         </form>
 
         <div className="platforms" aria-label="Supported platforms">{platforms.map(p => <span className="active" key={p}>{p}</span>)}</div>
-        <p className="microcopy">TikTok is fully connected now. Instagram, YouTube, Facebook and X are enabled in the interface and will use their dedicated providers as they become available. • Public links only • Use content you have permission to download.</p>
+        <p className="microcopy">YouTube, Instagram, Facebook, TikTok and X use a multi-provider adapter strategy. Provider availability can vary by platform and link type. • Public links only • Use content you have permission to download.</p>
 
         {error && <div className="notice error">{error}</div>}
 
