@@ -31,12 +31,23 @@ const sponsorLinks = [
   "https://mergerindirect.com/bqy5u1gqks?key=2826d95b950a0e10a9711a02d7bba24b"
 ];
 
+function SponsorBanner({ href, label }: { href: string; label: string }) {
+  return (
+    <div className="sponsorBanner" aria-label="Advertisement">
+      <div className="sponsorBannerLabel">ADVERTISEMENT</div>
+      <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorBannerLink">
+        <span>{label}</span><b>View sponsor ↗</b>
+      </a>
+    </div>
+  );
+}
+
 export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
-  const [adIndex, setAdIndex] = useState(0);
+  const [adIndex, setAdIndex] = useState(3);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: FormEvent) {
@@ -91,6 +102,8 @@ export default function Home() {
           <button className="downloadBtn" disabled={loading} type="submit">{loading ? "Preparing…" : "Download"}</button>
         </form>
 
+        <SponsorBanner href={sponsorLinks[0]} label="Featured sponsor" />
+
         <div className="platforms" aria-label="Supported platforms">
           {platforms.map((p) => (
             <button
@@ -127,6 +140,8 @@ export default function Home() {
           <p className="microcopy downloadNote">Choose a quality to download. A sponsor link may open in a separate tab to support free downloads.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
         </div>}
+
+        <SponsorBanner href={sponsorLinks[1]} label="Sponsored offer" />
 
       </section>
 
