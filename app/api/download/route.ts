@@ -4,9 +4,20 @@ import { URL } from "node:url";
 const PLATFORM_HOSTS = {
   TikTok: new Set(["tiktok.com", "www.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"]),
   Instagram: new Set(["instagram.com", "www.instagram.com"]),
-  YouTube: new Set(["youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com"]),
+  YouTube: new Set(["youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com", "music.youtube.com"]),
   Facebook: new Set(["facebook.com", "www.facebook.com", "m.facebook.com", "fb.watch"]),
-  X: new Set(["x.com", "www.x.com", "twitter.com", "www.twitter.com"])
+  X: new Set(["x.com", "www.x.com", "twitter.com", "www.twitter.com"]),
+  Reddit: new Set(["reddit.com", "www.reddit.com", "old.reddit.com", "redd.it"]),
+  Pinterest: new Set(["pinterest.com", "www.pinterest.com", "pin.it"]),
+  Vimeo: new Set(["vimeo.com", "www.vimeo.com", "player.vimeo.com"]),
+  Dailymotion: new Set(["dailymotion.com", "www.dailymotion.com", "dai.ly"]),
+  Twitch: new Set(["twitch.tv", "www.twitch.tv", "clips.twitch.tv"]),
+  Tumblr: new Set(["tumblr.com", "www.tumblr.com"]),
+  Snapchat: new Set(["snapchat.com", "www.snapchat.com"]),
+  VK: new Set(["vk.com", "www.vk.com", "vkvideo.ru", "www.vkvideo.ru"]),
+  Streamable: new Set(["streamable.com", "www.streamable.com"]),
+  SoundCloud: new Set(["soundcloud.com", "www.soundcloud.com"]),
+  Rutube: new Set(["rutube.ru", "www.rutube.ru"])
 } as const;
 
 const MAX_URL_LENGTH = 2048;
@@ -95,15 +106,9 @@ async function callProvider(raw: string, base: string, apiKey?: string) {
 
     if (!response.ok) throw new Error("Download provider request failed.");
     const data = await response.json();
-
-    if (data?.status === "error") {
-      throw new Error("The provider could not process this link.");
-    }
+    if (data?.status === "error") throw new Error("The provider could not process this link.");
 
     const formats = normalizeFormats(data);
-    if (!formats.length && typeof data?.url === "string") {
-      formats.push({ label: "Video • Download", url: data.url });
-    }
     if (!formats.length) throw new Error("No downloadable format was returned.");
 
     return {
@@ -121,20 +126,15 @@ async function callTikTokFallback(raw: string) {
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
-    const response = await fetch(
-      "https://www.tikwm.com/api/?url=" + encodeURIComponent(raw),
-      {
-        headers: { "user-agent": "Vidzora/1.0" },
-        signal: controller.signal,
-        cache: "no-store"
-      }
-    );
+    const response = await fetch("https://www.tikwm.com/api/?url=" + encodeURIComponent(raw), {
+      headers: { "user-agent": "Vidzora/1.0" },
+      signal: controller.signal,
+      cache: "no-store"
+    });
 
     if (!response.ok) throw new Error("TikTok provider request failed.");
     const data = await response.json();
-    if (data?.code !== 0 || !data?.data) {
-      throw new Error("This video is unavailable or cannot be processed.");
-    }
+    if (data?.code !== 0 || !data?.data) throw new Error("This video is unavailable or cannot be processed.");
 
     const formats = [
       data.data.hdplay ? { label: "Video • HD", url: data.data.hdplay } : null,
@@ -144,12 +144,7 @@ async function callTikTokFallback(raw: string) {
     ].filter(Boolean) as Array<{ label: string; url: string }>;
 
     if (!formats.length) throw new Error("No downloadable format was returned.");
-
-    return {
-      formats,
-      title: data.data.title || "TikTok video",
-      thumbnail: data.data.cover
-    };
+    return { formats, title: data.data.title || "TikTok video", thumbnail: data.data.cover };
   } finally {
     clearTimeout(timer);
   }
@@ -158,18 +153,12 @@ async function callTikTokFallback(raw: string) {
 export async function POST(req: Request) {
   const rateKey = getClientKey(req);
   if (isRateLimited(rateKey)) {
-    return NextResponse.json(
-      { success: false, error: "Too many requests. Please try again in a minute." },
-      { status: 429, headers: { "Retry-After": "60" } }
-    );
+    return NextResponse.json({ success: false, error: "Too many requests. Please try again in a minute." }, { status: 429, headers: { "Retry-After": "60" } });
   }
 
   const contentType = req.headers.get("content-type") || "";
   if (!contentType.toLowerCase().includes("application/json")) {
-    return NextResponse.json(
-      { success: false, error: "JSON requests are required." },
-      { status: 415 }
-    );
+    return NextResponse.json({ success: false, error: "JSON requests are required." }, { status: 415 });
   }
 
   try {
@@ -177,18 +166,12 @@ export async function POST(req: Request) {
     const raw = typeof body?.url === "string" ? body.url.trim() : "";
 
     if (!raw || raw.length > MAX_URL_LENGTH) {
-      return NextResponse.json(
-        { success: false, error: "Please enter a valid public video URL." },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Please enter a valid public video URL." }, { status: 400 });
     }
 
     const platform = detectPlatform(raw);
     if (!platform) {
-      return NextResponse.json(
-        { success: false, error: "Unsupported link. Paste a TikTok, Instagram, YouTube, Facebook or X video URL." },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Unsupported link. Paste a public video URL from a supported platform." }, { status: 400 });
     }
 
     const providers: Array<{ base: string; key: string | undefined }> = [];
@@ -214,20 +197,21 @@ export async function POST(req: Request) {
     }
 
     if (!result && platform === "TikTok") {
-      result = await callTikTokFallback(raw);
+      try {
+        result = await callTikTokFallback(raw);
+      } catch (error: any) {
+        lastProviderError = error?.message || "TikTok provider failed.";
+      }
     }
 
     if (!result) {
-      return NextResponse.json(
-        {
-          success: false,
-          platform,
-          error: lastProviderError
-            ? platform + " provider failed. Please try again with another public link."
-            : platform + " is detected, but no compatible download provider is connected yet."
-        },
-        { status: 503 }
-      );
+      return NextResponse.json({
+        success: false,
+        platform,
+        error: lastProviderError
+          ? platform + " provider failed. Please try again with another public link."
+          : platform + " is detected, but the media engine is not connected yet."
+      }, { status: 503 });
     }
 
     return NextResponse.json({
@@ -238,11 +222,7 @@ export async function POST(req: Request) {
       formats: result.formats
     });
   } catch (e: any) {
-    const message =
-      e?.name === "AbortError"
-        ? "The request timed out. Please try again."
-        : e?.message || "Unable to process this link.";
-
+    const message = e?.name === "AbortError" ? "The request timed out. Please try again." : e?.message || "Unable to process this link.";
     return NextResponse.json({ success: false, error: message }, { status: 502 });
   }
 }
