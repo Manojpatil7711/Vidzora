@@ -92,7 +92,6 @@ export default function Home() {
   function startDownload(e: React.MouseEvent<HTMLAnchorElement>, targetUrl: string) {
     e.preventDefault();
     setPendingDownloadUrl(targetUrl);
-    setAdIndex((i) => (i + 1) % sponsorLinks.length);
     setSponsorOpen(true);
   }
 
@@ -101,6 +100,7 @@ export default function Home() {
     window.open(pendingDownloadUrl, "_blank", "noopener,noreferrer");
     setPendingDownloadUrl("");
     setSponsorOpen(false);
+    setAdIndex((i) => (i + 1) % sponsorLinks.length);
   }
 
   return (
@@ -174,15 +174,15 @@ export default function Home() {
       </section>
 
       <section className="section revenue">
-        <div><div className="eyebrow">GROWTH ENGINE</div><h2>Built to scale with traffic.</h2></div>
+        <div><div className="eyebrow">SUPPORTED SOURCES</div><h2>One simple workflow for public video links.</h2></div>
         <div className="growthCards">
-          <article><strong>01</strong><h3>Fast mobile UX</h3><p>One clear action, lightweight pages and no account wall.</p></article>
-          <article><strong>02</strong><h3>Search-ready</h3><p>Useful FAQs, legal pages, sitemap and crawlable content support organic discovery.</p></article>
-          <article><strong>03</strong><h3>Multiple revenue paths</h3><p>Download actions can monetize real user traffic without hiding the sponsor relationship.</p></article>
+          <article><strong>01</strong><h3>Popular platforms</h3><p>Vidzora can analyze supported public links from services such as YouTube, Instagram, Facebook and TikTok.</p></article>
+          <article><strong>02</strong><h3>Quality when available</h3><p>After analysis, available formats are shown so you can choose the option provided for that source.</p></article>
+          <article><strong>03</strong><h3>Mobile-first</h3><p>Paste a link, review the available result and continue without creating an account.</p></article>
         </div>
       </section>
 
-      <section id="faq" className="section faq">
+      <section className="section faq">
         <div><div className="eyebrow">FAQ</div><h2>Good to know.</h2></div>
         <div>
           {[
