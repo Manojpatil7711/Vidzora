@@ -19,6 +19,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
+  const [adIndex, setAdIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: FormEvent) {
@@ -42,6 +43,13 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function startDownload(e: React.MouseEvent<HTMLAnchorElement>, targetUrl: string) {
+    const sponsor = sponsorLinks[adIndex % sponsorLinks.length];
+    setAdIndex((i) => (i + 1) % sponsorLinks.length);
+    window.open(sponsor, "_blank", "noopener,noreferrer");
+    window.location.href = targetUrl;
   }
 
   return (
@@ -78,29 +86,17 @@ export default function Home() {
 
           <div className="formats">
             {result.formats?.map((f: any) => (
-              <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="format">
+              <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="format" onClick={(e) => startDownload(e, f.url)}>
                 <span>{f.label}</span><b>Download ↘</b>
               </a>
             ))}
           </div>
 
-          <div className="sponsorBox">
-            <div>
-              <span className="sponsorLabel">SPONSORED</span>
-              <h3>Support free downloads</h3>
-              <p>Vidzora is free to use. Optional sponsor links help support the service.</p>
-            </div>
-            <div className="sponsorGrid">
-              {sponsorLinks.map((link, i) => (
-                <a key={link} href={link} target="_blank" rel="noopener noreferrer sponsored" className="sponsorLink">
-                  Sponsor {i + 1} ↗
-                </a>
-              ))}
-            </div>
-          </div>
+          <p className="microcopy downloadNote">Choose a quality to download. A sponsor link may open in a separate tab to support free downloads.</p>
 
           <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
         </div>}
+
       </section>
 
       <section id="how" className="section">
@@ -117,7 +113,7 @@ export default function Home() {
         <div className="growthCards">
           <article><strong>01</strong><h3>Fast mobile UX</h3><p>One clear action, lightweight pages and no account wall.</p></article>
           <article><strong>02</strong><h3>Search-ready</h3><p>Useful FAQs, legal pages, sitemap and crawlable content support organic discovery.</p></article>
-          <article><strong>03</strong><h3>Multiple revenue paths</h3><p>Sponsored placements can monetize real user traffic without pretending that ad clicks are downloads.</p></article>
+          <article><strong>03</strong><h3>Multiple revenue paths</h3><p>Download actions can monetize real user traffic without hiding the sponsor relationship.</p></article>
         </div>
       </section>
 
