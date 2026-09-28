@@ -194,6 +194,10 @@ export default function Home() {
         </div>
       </section>
 
+      <div style={{position:"fixed",right:"12px",bottom:"10px",zIndex:20,maxWidth:"320px",fontSize:"10px",lineHeight:1.4,textAlign:"right",opacity:0.62}}>
+        <span>Vidzora is a tool for publicly accessible content. Users are responsible for ensuring they have the necessary rights or permission to download and use content.</span>
+      </div>
+
       <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
 
       {sponsorOpen && (
