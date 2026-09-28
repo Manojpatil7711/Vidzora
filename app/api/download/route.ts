@@ -177,7 +177,7 @@ export async function POST(req: Request) {
     }
 
     const providers: Array<{ base: string; key: string | undefined }> = [];
-    const primaryBase = process.env.COBALT_API_URL?.trim();
+    const primaryBase = process.env.COBALT_API_URL?.trim() || "https://cobalt-production-45cd.up.railway.app/";
     const primaryKey = process.env.COBALT_API_KEY?.trim();
     const secondaryBase = process.env.SECONDARY_PROVIDER_URL?.trim();
     const secondaryKey = process.env.SECONDARY_PROVIDER_API_KEY?.trim();
