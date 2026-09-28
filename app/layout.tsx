@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   robots: { index: true, follow: true },
+  verification: { google: "4dCJJ9eYqXHJqOKHlvTEzfBfLo0TO4k1fthx0LYNL2E" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
