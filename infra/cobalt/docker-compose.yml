@@ -1,6 +1,6 @@
 services:
   cobalt:
-    image: ghcr.io/imputnet/cobalt:latest
+    image: ghcr.io/imputnet/cobalt:11
     container_name: vidzora-cobalt
     restart: unless-stopped
     init: true
