@@ -96,6 +96,8 @@ async function callProvider(raw: string, base: string, apiKey?: string) {
       body: JSON.stringify({
         url: raw,
         videoQuality: "max",
+        alwaysProxy: false,
+        disableMetadata: false,
         audioFormat: "mp3",
         downloadMode: "auto",
         filenameStyle: "basic"
