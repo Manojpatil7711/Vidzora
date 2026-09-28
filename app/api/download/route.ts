@@ -69,10 +69,7 @@ function normalizeFormats(data: any) {
   return formats;
 }
 
-async function callCobalt(raw: string) {
-  const base = process.env.COBALT_API_URL?.trim();
-  if (!base) return null;
-
+async function callProvider(raw: string, base: string, apiKey?: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
@@ -80,7 +77,11 @@ async function callCobalt(raw: string) {
     const endpoint = new URL(base);
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "accept": "application/json", "content-type": "application/json" },
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+        ...(apiKey ? { Authorization: `Api-Key ${apiKey}` } : {})
+      },
       body: JSON.stringify({
         url: raw,
         videoQuality: "max",
@@ -100,6 +101,9 @@ async function callCobalt(raw: string) {
     }
 
     const formats = normalizeFormats(data);
+    if (!formats.length && typeof data?.url === "string") {
+      formats.push({ label: "Video • Download", url: data.url });
+    }
     if (!formats.length) throw new Error("No downloadable format was returned.");
 
     return {
@@ -187,17 +191,36 @@ export async function POST(req: Request) {
       );
     }
 
-    // One provider adapter can serve all five supported platforms. The API URL
-    // stays server-side in Vercel Environment Variables.
-    const cobalt = await callCobalt(raw);
-    const result = cobalt || (platform === "TikTok" ? await callTikTokFallback(raw) : null);
+    // Provider chain: primary Cobalt instance -> secondary compatible instance -> TikTok fallback.
+    // Provider URLs and keys stay server-side in Vercel Environment Variables.
+    const providers = [
+      { base: process.env.COBALT_API_URL?.trim(), key: process.env.COBALT_API_KEY?.trim() },
+      { base: process.env.SECONDARY_PROVIDER_URL?.trim(), key: process.env.SECONDARY_PROVIDER_API_KEY?.trim() }
+    ].filter((p): p is { base: string; key?: string } => Boolean(p.base));
+
+    let result: Awaited<ReturnType<typeof callProvider>> = null;
+    let lastProviderError = "";
+    for (const provider of providers) {
+      try {
+        result = await callProvider(raw, provider.base, provider.key);
+        if (result) break;
+      } catch (error: any) {
+        lastProviderError = error?.message || "Provider failed.";
+      }
+    }
+
+    if (!result && platform === "TikTok") {
+      result = await callTikTokFallback(raw);
+    }
 
     if (!result) {
       return NextResponse.json(
         {
           success: false,
           platform,
-          error: platform + " is detected, but its download provider is not connected yet."
+          error: lastProviderError
+            ? platform + " provider failed. Please try again with another public link."
+            : platform + " is detected, but no compatible download provider is connected yet."
         },
         { status: 503 }
       );
