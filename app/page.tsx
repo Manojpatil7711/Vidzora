@@ -31,13 +31,27 @@ const sponsorLinks = [
   "https://mergerindirect.com/bqy5u1gqks?key=2826d95b950a0e10a9711a02d7bba24b"
 ];
 
-function SponsorBanner({ href, label }: { href: string; label: string }) {
+function DownloadSponsorModal({
+  href,
+  onContinue,
+  onClose
+}: {
+  href: string;
+  onContinue: () => void;
+  onClose: () => void;
+}) {
   return (
-    <div className="sponsorBanner" aria-label="Advertisement">
-      <div className="sponsorBannerLabel">ADVERTISEMENT</div>
-      <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorBannerLink">
-        <span>{label}</span><b>View sponsor ↗</b>
-      </a>
+    <div className="sponsorModal" role="dialog" aria-modal="true" aria-label="Sponsored offer">
+      <div className="sponsorModalCard">
+        <div className="sponsorBannerLabel">ADVERTISEMENT</div>
+        <h3>Support Vidzora</h3>
+        <p>Vidzora is free to use. You may view this sponsored offer, or continue directly to your download.</p>
+        <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">View sponsor ↗</a>
+        <div className="sponsorModalActions">
+          <button type="button" className="sponsorModalContinue" onClick={onContinue}>Continue to download</button>
+          <button type="button" className="sponsorModalClose" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -47,7 +61,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
-  const [adIndex, setAdIndex] = useState(3);
+  const [adIndex, setAdIndex] = useState(0);
+  const [sponsorOpen, setSponsorOpen] = useState(false);
+  const [pendingDownloadUrl, setPendingDownloadUrl] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: FormEvent) {
@@ -73,8 +89,17 @@ export default function Home() {
   }
 
   function startDownload(e: React.MouseEvent<HTMLAnchorElement>, targetUrl: string) {
+    e.preventDefault();
+    setPendingDownloadUrl(targetUrl);
     setAdIndex((i) => (i + 1) % sponsorLinks.length);
-    // Downloads start immediately. Sponsor links remain optional and separate from controls.
+    setSponsorOpen(true);
+  }
+
+  function continueDownload() {
+    if (!pendingDownloadUrl) return;
+    window.open(pendingDownloadUrl, "_blank", "noopener,noreferrer");
+    setPendingDownloadUrl("");
+    setSponsorOpen(false);
   }
 
   return (
@@ -98,8 +123,6 @@ export default function Home() {
           </div>
           <button className="downloadBtn" disabled={loading} type="submit">{loading ? "Preparing…" : "Download"}</button>
         </form>
-
-        <SponsorBanner href={sponsorLinks[0]} label="Featured sponsor" />
 
         <div className="platforms" aria-label="Supported platforms">
           {platforms.map((p) => (
@@ -127,7 +150,6 @@ export default function Home() {
           <div className="resultHead">
             <div><small>{result.platform}</small><h2>{result.title || "Ready to download"}</h2></div>
           </div>
-          <SponsorBanner href={sponsorLinks[2]} label="Sponsored offer" />
           <div className="formats">
             {result.formats?.map((f: any) => (
               <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="format" onClick={(e) => startDownload(e, f.url)}>
@@ -135,15 +157,11 @@ export default function Home() {
               </a>
             ))}
           </div>
-          <p className="microcopy downloadNote">Choose a quality to download. Sponsored offers are optional and separate from the download controls.</p>
+          <p className="microcopy downloadNote">Choose a quality to download. A sponsored offer may appear when you start a download.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
         </div>}
 
-        <SponsorBanner href={sponsorLinks[1]} label="Sponsored offer" />
-
       </section>
-
-      <SponsorBanner href={sponsorLinks[3]} label="Sponsored offer" />
 
       <section id="how" className="section">
         <div><div className="eyebrow">HOW IT WORKS</div><h2>Three steps. No account.</h2></div>
@@ -154,8 +172,6 @@ export default function Home() {
         </div>
       </section>
 
-      <SponsorBanner href={sponsorLinks[4]} label="Sponsored offer" />
-
       <section className="section revenue">
         <div><div className="eyebrow">GROWTH ENGINE</div><h2>Built to scale with traffic.</h2></div>
         <div className="growthCards">
@@ -164,8 +180,6 @@ export default function Home() {
           <article><strong>03</strong><h3>Multiple revenue paths</h3><p>Download actions can monetize real user traffic without hiding the sponsor relationship.</p></article>
         </div>
       </section>
-
-      <SponsorBanner href={sponsorLinks[5]} label="Sponsored offer" />
 
       <section id="faq" className="section faq">
         <div><div className="eyebrow">FAQ</div><h2>Good to know.</h2></div>
@@ -180,9 +194,15 @@ export default function Home() {
         </div>
       </section>
 
-      <SponsorBanner href={sponsorLinks[6]} label="Sponsored offer" />
-
       <footer><span>© {new Date().getFullYear()} Vidzora</span><span>Built for speed. Use responsibly.</span></footer>
+
+      {sponsorOpen && (
+        <DownloadSponsorModal
+          href={sponsorLinks[adIndex]}
+          onContinue={continueDownload}
+          onClose={() => { setSponsorOpen(false); setPendingDownloadUrl(""); }}
+        />
+      )}
     </main>
   );
 }
