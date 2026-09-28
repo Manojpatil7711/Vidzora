@@ -1,13 +1,18 @@
 services:
   cobalt:
-    image: ghcr.io/imputnet/cobalt:11
+    image: ghcr.io/imputnet/cobalt:11.7.1-a636575
     container_name: vidzora-cobalt
     restart: unless-stopped
     init: true
+    read_only: true
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     environment:
       API_URL: "https://YOUR-COBALT-DOMAIN/"
+      API_NAME: "vidzora-media-1"
+      API_PORT: "9000"
+      CORS_WILDCARD: "0"
+      CORS_URL: "https://YOUR-VIDZORA-DOMAIN"
       API_AUTH_REQUIRED: "1"
       API_KEY_URL: "file:///keys.json"
       RATELIMIT_MAX: "30"
@@ -16,7 +21,7 @@ services:
       - ./keys.json:/keys.json:ro
 
   watchtower:
-    image: containrrr/watchtower:latest
+    image: ghcr.io/containrrr/watchtower:latest
     container_name: vidzora-cobalt-watchtower
     restart: unless-stopped
     command: --cleanup --scope vidzora-cobalt --interval 900 --include-restarting
