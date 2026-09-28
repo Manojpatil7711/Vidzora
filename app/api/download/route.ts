@@ -10,6 +10,7 @@ const PLATFORM_HOSTS = {
 } as const;
 
 const MAX_URL_LENGTH = 2048;
+const REQUEST_TIMEOUT = 15000;
 
 function detectPlatform(raw: string) {
   try {
@@ -22,6 +23,112 @@ function detectPlatform(raw: string) {
     return null;
   } catch {
     return null;
+  }
+}
+
+function normalizeFormats(data: any) {
+  const formats: Array<{ label: string; url: string }> = [];
+  const add = (label: string, url: unknown) => {
+    if (typeof url === "string" && /^https?:\/\//i.test(url)) formats.push({ label, url });
+  };
+
+  if (data?.status === "picker" && Array.isArray(data.picker)) {
+    data.picker.forEach((item: any, index: number) => {
+      if (item?.type === "video") add("Video • Item " + (index + 1), item.url);
+      else if (item?.type === "gif") add("GIF • Item " + (index + 1), item.url);
+    });
+    if (data.audio) add("Audio", data.audio);
+    return formats;
+  }
+
+  add("Video • Best available", data?.url);
+  add("Audio", data?.audio);
+  add("Video • HD", data?.hd);
+  add("Video • 1080p", data?.video1080);
+  add("Video • 720p", data?.video720);
+  add("Video • 480p", data?.video480);
+  return formats;
+}
+
+async function callCobalt(raw: string) {
+  const base = process.env.COBALT_API_URL?.trim();
+  if (!base) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  try {
+    const endpoint = new URL(base);
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "accept": "application/json", "content-type": "application/json" },
+      body: JSON.stringify({
+        url: raw,
+        videoQuality: "max",
+        audioFormat: "mp3",
+        downloadMode: "auto",
+        filenameStyle: "basic"
+      }),
+      signal: controller.signal,
+      cache: "no-store"
+    });
+
+    if (!response.ok) throw new Error("Download provider request failed.");
+    const data = await response.json();
+
+    if (data?.status === "error") {
+      throw new Error("The provider could not process this link.");
+    }
+
+    const formats = normalizeFormats(data);
+    if (!formats.length) throw new Error("No downloadable format was returned.");
+
+    return {
+      formats,
+      title: data?.filename || "Ready to download",
+      thumbnail: data?.thumbnail
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callTikTokFallback(raw: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  try {
+    const response = await fetch(
+      "https://www.tikwm.com/api/?url=" + encodeURIComponent(raw),
+      {
+        headers: { "user-agent": "Vidzora/1.0" },
+        signal: controller.signal,
+        cache: "no-store"
+      }
+    );
+
+    if (!response.ok) throw new Error("TikTok provider request failed.");
+    const data = await response.json();
+    if (data?.code !== 0 || !data?.data) {
+      throw new Error("This video is unavailable or cannot be processed.");
+    }
+
+    const formats = [
+      data.data.hdplay ? { label: "Video • HD", url: data.data.hdplay } : null,
+      data.data.play ? { label: "Video • No watermark", url: data.data.play } : null,
+      data.data.wmplay ? { label: "Video • Watermark", url: data.data.wmplay } : null,
+      data.data.music ? { label: "Audio", url: data.data.music } : null
+    ].filter(Boolean) as Array<{ label: string; url: string }>;
+
+    if (!formats.length) throw new Error("No downloadable format was returned.");
+
+    return {
+      formats,
+      title: data.data.title || "TikTok video",
+      thumbnail: data.data.cover
+    };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -38,7 +145,6 @@ export async function POST(req: Request) {
     }
 
     const platform = detectPlatform(raw);
-
     if (!platform) {
       return NextResponse.json(
         { success: false, error: "Unsupported link. Paste a TikTok, Instagram, YouTube, Facebook or X video URL." },
@@ -46,60 +152,29 @@ export async function POST(req: Request) {
       );
     }
 
-    // TikTok provider is production-connected. Other platform adapters are
-    // deliberately gated until a reliable provider is configured, so the UI
-    // never pretends that an unverified downloader works.
-    if (platform !== "TikTok") {
+    // One provider adapter can serve all five supported platforms. The API URL
+    // stays server-side in Vercel Environment Variables.
+    const cobalt = await callCobalt(raw);
+    const result = cobalt || (platform === "TikTok" ? await callTikTokFallback(raw) : null);
+
+    if (!result) {
       return NextResponse.json(
         {
           success: false,
           platform,
-          error: platform + " is detected successfully, but its download provider is not connected yet."
+          error: platform + " is detected, but its download provider is not connected yet."
         },
         { status: 503 }
       );
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000);
-
-    try {
-      const r = await fetch(
-        "https://www.tikwm.com/api/?url=" + encodeURIComponent(raw),
-        {
-          headers: { "user-agent": "Vidzora/1.0" },
-          signal: controller.signal,
-          cache: "no-store"
-        }
-      );
-
-      if (!r.ok) throw new Error("Provider request failed.");
-
-      const d = await r.json();
-
-      if (d?.code !== 0 || !d?.data) {
-        throw new Error("This video is unavailable or cannot be processed.");
-      }
-
-      const formats = [
-        d.data.play ? { label: "Video • No watermark", url: d.data.play } : null,
-        d.data.hdplay ? { label: "Video • HD", url: d.data.hdplay } : null,
-        d.data.wmplay ? { label: "Video • Watermark", url: d.data.wmplay } : null,
-        d.data.music ? { label: "Audio", url: d.data.music } : null
-      ].filter(Boolean);
-
-      if (!formats.length) throw new Error("No downloadable format was returned.");
-
-      return NextResponse.json({
-        success: true,
-        platform,
-        title: d.data.title || "TikTok video",
-        thumbnail: d.data.cover,
-        formats
-      });
-    } finally {
-      clearTimeout(timer);
-    }
+    return NextResponse.json({
+      success: true,
+      platform,
+      title: result.title,
+      thumbnail: result.thumbnail,
+      formats: result.formats
+    });
   } catch (e: any) {
     const message =
       e?.name === "AbortError"
