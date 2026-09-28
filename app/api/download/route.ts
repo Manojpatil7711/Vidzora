@@ -64,7 +64,8 @@ function normalizeFormats(data: any) {
 
   if (data?.status === "picker" && Array.isArray(data.picker)) {
     data.picker.forEach((item: any, index: number) => {
-      if (item?.type === "video") add("Video • Item " + (index + 1), item.url);\n      else if (item?.type === "photo") add("Photo • Item " + (index + 1), item.url);
+      if (item?.type === "video") add("Video • Item " + (index + 1), item.url);
+      else if (item?.type === "photo") add("Photo • Item " + (index + 1), item.url);
       else if (item?.type === "gif") add("GIF • Item " + (index + 1), item.url);
     });
     if (data.audio) add("Audio", data.audio);
