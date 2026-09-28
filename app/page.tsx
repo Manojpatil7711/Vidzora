@@ -194,7 +194,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer><span>© {new Date().getFullYear()} Vidzora</span><span>Built for speed. Use responsibly.</span></footer>
+      <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
 
       {sponsorOpen && (
         <DownloadSponsorModal
