@@ -3,3 +3,4 @@
 
 
 .errorPage{min-height:100svh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 0%,rgba(255,255,255,.08),transparent 42%),#08090c;color:#fff}.errorCard{width:min(100%,520px);padding:32px;border:1px solid rgba(255,255,255,.12);border-radius:28px;background:rgba(255,255,255,.05);box-shadow:0 24px 80px rgba(0,0,0,.35);text-align:center}.errorCard h1{font-size:clamp(2rem,8vw,3.4rem);margin:10px 0}.errorCard p{color:#a7abb7;margin:0 0 24px}.errorCard .downloadBtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}.eyebrow{font-size:.72rem;letter-spacing:.16em;font-weight:800;color:#a7abb7}
+.pasteBtn{border:0;background:transparent;color:#fff;font-weight:800;cursor:pointer;padding:8px}.pasteBtn:focus-visible,.clear:focus-visible,.downloadBtn:focus-visible,.again:focus-visible,.sponsorLink:focus-visible{outline:2px solid #fff;outline-offset:3px}.pending{opacity:.55}
