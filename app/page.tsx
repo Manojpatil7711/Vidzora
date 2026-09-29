@@ -76,6 +76,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
   const [mediaType, setMediaType] = useState<"mp4" | "mp3">("mp4");
+  const [audioLoading, setAudioLoading] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
   const [sponsorHref, setSponsorHref] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +126,37 @@ export default function Home() {
       setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function selectMediaType(type: "mp4" | "mp3") {
+    if (type === "mp4") {
+      setMediaType("mp4");
+      return;
+    }
+
+    if (audioFormats.length) {
+      setMediaType("mp3");
+      return;
+    }
+
+    if (!url.trim() || audioLoading) return;
+    setAudioLoading(true);
+    setError("");
+    try {
+      const r = await fetch("/api/download", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: url.trim(), mode: "audio" })
+      });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error(d.error || "MP3 audio is not available for this link.");
+      setResult((prev: any) => prev ? { ...prev, formats: [...(Array.isArray(prev.formats) ? prev.formats : []), ...(Array.isArray(d.formats) ? d.formats : [])] } : d);
+      setMediaType("mp3");
+    } catch (err: any) {
+      setError(err.message || "Unable to prepare MP3 audio.");
+    } finally {
+      setAudioLoading(false);
     }
   }
 
@@ -192,8 +224,8 @@ export default function Home() {
           </div>
 
           <div className="mediaTypeTabs" role="tablist" aria-label="Download format">
-            <button type="button" className={mediaType === "mp4" ? "mediaTab activeTab" : "mediaTab"} disabled={!videoFormats.length} onClick={() => setMediaType("mp4")}>MP4 Video</button>
-            <button type="button" className={mediaType === "mp3" ? "mediaTab activeTab" : "mediaTab"} disabled={!audioFormats.length} onClick={() => setMediaType("mp3")}>MP3 Music</button>
+            <button type="button" className={mediaType === "mp4" ? "mediaTab activeTab" : "mediaTab"} disabled={!videoFormats.length} onClick={() => selectMediaType("mp4")}>MP4 Video</button>
+            <button type="button" className={mediaType === "mp3" ? "mediaTab activeTab" : "mediaTab"} disabled={audioLoading} onClick={() => selectMediaType("mp3")}>{audioLoading ? "Preparing MP3…" : "MP3 Music"}</button>
           </div>
 
           <div className="qualityHeader">
@@ -219,7 +251,7 @@ export default function Home() {
           </div>
 
           {!activeFormats.length && <div className="notice error">This source did not return a {mediaType.toUpperCase()} format.</div>}
-          <p className="microcopy downloadNote">Select MP4 or MP3, choose the available quality, then download. Sponsored offers rotate between download actions.</p>
+          <p className="microcopy downloadNote">{mediaType === "mp3" && audioLoading ? "Preparing MP3 audio…" : "Select MP4 or MP3, choose the available quality, then download. Sponsored offers rotate between download actions."}</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
         </div>}
       </section>
