@@ -45,7 +45,7 @@ function normalizeSourceUrl(raw: string) {
   return u.toString();
 }
 
-function normalizeFormats(data: any) {
+function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
   const formats: Array<{ label: string; url: string }> = [];
   const seen = new Set<string>();
 
@@ -65,8 +65,13 @@ function normalizeFormats(data: any) {
     return formats;
   }
 
-  add("Video • Best available", data?.url);
-  add("Audio", data?.audio);
+  if (mode === "audio") {
+    add("Audio • MP3", data?.url);
+    add("Audio • MP3", data?.audio);
+  } else {
+    add("Video • Best available", data?.url);
+    add("Audio", data?.audio);
+  }
   add("Video • HD", data?.hd);
   add("Video • 1080p", data?.video1080);
   add("Video • 720p", data?.video720);
@@ -74,7 +79,7 @@ function normalizeFormats(data: any) {
   return formats;
 }
 
-async function callProvider(raw: string, base: string, apiKey?: string) {
+async function callProvider(raw: string, base: string, apiKey?: string, mode: "video" | "audio" = "video") {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
@@ -93,7 +98,7 @@ async function callProvider(raw: string, base: string, apiKey?: string) {
         alwaysProxy: false,
         disableMetadata: false,
         audioFormat: "mp3",
-        downloadMode: "auto",
+        downloadMode: mode === "audio" ? "audio" : "auto",
         filenameStyle: "basic"
       }),
       signal: controller.signal,
@@ -104,7 +109,7 @@ async function callProvider(raw: string, base: string, apiKey?: string) {
     const data = await response.json();
     if (data?.status === "error") throw new Error(data?.error?.code || "Provider could not process this link.");
 
-    const formats = normalizeFormats(data);
+    const formats = normalizeFormats(data, mode);
     if (!formats.length) throw new Error("No downloadable format was returned.");
 
     return {
@@ -155,6 +160,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const input = typeof body?.url === "string" ? body.url.trim() : "";
+    const mode = body?.mode === "audio" ? "audio" : "video";
 
     if (!input || input.length > MAX_URL_LENGTH) {
       return NextResponse.json({ success: false, error: "Please enter a valid public media URL." }, { status: 400 });
@@ -191,7 +197,7 @@ export async function POST(req: Request) {
 
     for (const provider of providers) {
       try {
-        result = await callProvider(raw, provider.base, provider.key);
+        result = await callProvider(raw, provider.base, provider.key, mode);
         if (result) break;
       } catch (error: any) {
         lastProviderError = error?.message || "Provider failed.";
