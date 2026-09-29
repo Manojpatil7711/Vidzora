@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 const platforms = [
   { name: "YouTube", url: "https://www.youtube.com/" },
@@ -32,6 +32,19 @@ const sponsorLinks = [
   "https://mergerindirect.com/bqy5u1gqks?key=2826d95b950a0e10a9711a02d7bba24b"
 ];
 
+type Format = { label: string; url: string };
+
+function isAudio(f: Format) {
+  return /audio|mp3|music/i.test(f.label);
+}
+
+function qualityName(label: string) {
+  const match = label.match(/(2160p|1440p|1080p|720p|480p|360p|240p|144p|HD)/i);
+  if (match) return match[1].toUpperCase() === "HD" ? "HD" : match[1];
+  if (/best/i.test(label)) return "Best available";
+  return label.replace(/^Video\s*[•·-]?\s*/i, "").trim() || "Available";
+}
+
 function DownloadSponsorModal({
   href,
   onContinue,
@@ -46,7 +59,7 @@ function DownloadSponsorModal({
       <div className="sponsorModalCard">
         <div className="sponsorBannerLabel">ADVERTISEMENT</div>
         <h3>Support Vidzora</h3>
-        <p>Vidzora is free to use. You may view this sponsored offer, or continue directly to your download.</p>
+        <p>Vidzora is free to use. A sponsored offer is shown before the download. You can open it or continue directly.</p>
         <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">View sponsor ↗</a>
         <div className="sponsorModalActions">
           <button type="button" className="sponsorModalContinue" onClick={onContinue}>Continue to download</button>
@@ -62,12 +75,40 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
+  const [mediaType, setMediaType] = useState<"mp4" | "mp3">("mp4");
+  const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
+  const [sponsorHref, setSponsorHref] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const sponsorIndexRef = useRef(0);
+
+  const formats: Format[] = Array.isArray(result?.formats) ? result.formats : [];
+  const videoFormats = useMemo(() => formats.filter((f) => !isAudio(f)), [formats]);
+  const audioFormats = useMemo(() => formats.filter(isAudio), [formats]);
+  const activeFormats = mediaType === "mp3" ? audioFormats : videoFormats;
+
+  useEffect(() => {
+    if (!result) return;
+    const timer = window.setTimeout(() => {
+      resultRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [result]);
+
+  useEffect(() => {
+    if (mediaType === "mp3" && !audioFormats.length && videoFormats.length) setMediaType("mp4");
+    if (mediaType === "mp4" && !videoFormats.length && audioFormats.length) setMediaType("mp3");
+  }, [mediaType, audioFormats.length, videoFormats.length]);
+
+  useEffect(() => {
+    setSelectedFormat(activeFormats[0] || null);
+  }, [mediaType, result]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setResult(null);
+    setSelectedFormat(null);
     if (!url.trim()) return setError("Paste a public video URL first.");
     setLoading(true);
     try {
@@ -79,6 +120,7 @@ export default function Home() {
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error(d.error || "Unable to process this link.");
       setResult(d);
+      setMediaType(Array.isArray(d.formats) && d.formats.some(isAudio) && !d.formats.some((f: Format) => !isAudio(f)) ? "mp3" : "mp4");
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -86,9 +128,25 @@ export default function Home() {
     }
   }
 
-  function startDownload(e: React.MouseEvent<HTMLAnchorElement>, targetUrl: string) {
-    e.preventDefault();
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
+  function chooseFormat(format: Format) {
+    setSelectedFormat(format);
+    sponsorIndexRef.current = (sponsorIndexRef.current + 1) % sponsorLinks.length;
+    setSponsorHref(sponsorLinks[sponsorIndexRef.current]);
+  }
+
+  function continueDownload() {
+    const target = selectedFormat?.url;
+    setSponsorHref("");
+    if (!target) return;
+    window.open(target, "_blank", "noopener,noreferrer");
+  }
+
+  function copyVidzoraLink() {
+    if (!url) return;
+    navigator.clipboard?.writeText(url).then(
+      () => setError("Source link copied."),
+      () => setError("Copy failed. Long-press the source link to copy it.")
+    );
   }
 
   return (
@@ -115,18 +173,7 @@ export default function Home() {
 
         <div className="platforms" aria-label="Supported platforms">
           {platforms.map((p) => (
-            <button
-              className="active platformLink"
-              type="button"
-              key={p.name}
-              onClick={() => {
-                setError("");
-                setUrl("");
-                inputRef.current?.focus();
-              }}
-              aria-label={`Paste a ${p.name} URL`}
-              title={`Paste a ${p.name} URL`}
-            >
+            <button className="active platformLink" type="button" key={p.name} onClick={() => { setError(""); setUrl(""); inputRef.current?.focus(); }} aria-label={`Paste a ${p.name} URL`} title={`Paste a ${p.name} URL`}>
               {p.name}
             </button>
           ))}
@@ -135,21 +182,46 @@ export default function Home() {
 
         {error && <div className="notice error">{error}</div>}
 
-        {result && <div className="result">
+        {result && <div className="result" ref={resultRef}>
           <div className="resultHead">
-            <div><small>{result.platform}</small><h2>{result.title || "Ready to download"}</h2></div>
+            <div>
+              <small>{result.platform}</small>
+              <h2>{result.title || "Ready to download"}</h2>
+            </div>
+            <button type="button" className="sourceLinkBtn" onClick={copyVidzoraLink}>Copy source link</button>
           </div>
+
+          <div className="mediaTypeTabs" role="tablist" aria-label="Download format">
+            <button type="button" className={mediaType === "mp4" ? "mediaTab activeTab" : "mediaTab"} disabled={!videoFormats.length} onClick={() => setMediaType("mp4")}>MP4 Video</button>
+            <button type="button" className={mediaType === "mp3" ? "mediaTab activeTab" : "mediaTab"} disabled={!audioFormats.length} onClick={() => setMediaType("mp3")}>MP3 Music</button>
+          </div>
+
+          <div className="qualityHeader">
+            <span>{mediaType === "mp3" ? "Choose audio" : "Choose video quality"}</span>
+            <span className="qualityHint">{activeFormats.length} option{activeFormats.length === 1 ? "" : "s"}</span>
+          </div>
+
           <div className="formats">
-            {result.formats?.map((f: any) => (
-              <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="format" onClick={(e) => startDownload(e, f.url)}>
-                <span>{f.label}</span><b>Download ↘</b>
-              </a>
+            {activeFormats.map((f) => (
+              <button
+                key={f.url}
+                type="button"
+                className={selectedFormat?.url === f.url ? "format formatSelected" : "format"}
+                onClick={() => chooseFormat(f)}
+              >
+                <span>
+                  <strong>{mediaType === "mp3" ? "MP3" : qualityName(f.label)}</strong>
+                  <small>{mediaType === "mp3" ? "Best available audio" : f.label}</small>
+                </span>
+                <b>Download ↘</b>
+              </button>
             ))}
           </div>
-          <p className="microcopy downloadNote">Choose a quality and download immediately.</p>
-          <button className="again" onClick={() => { setResult(null); setUrl(""); }}>Download another</button>
-        </div>}
 
+          {!activeFormats.length && <div className="notice error">This source did not return a {mediaType.toUpperCase()} format.</div>}
+          <p className="microcopy downloadNote">Select MP4 or MP3, choose the available quality, then download. Sponsored offers rotate between download actions.</p>
+          <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
+        </div>}
       </section>
 
       <section id="how" className="section">
@@ -157,7 +229,7 @@ export default function Home() {
         <div className="steps">
           <article><b>01</b><h3>Copy</h3><p>Copy the link to a public social video.</p></article>
           <article><b>02</b><h3>Paste</h3><p>Paste it into Vidzora and let us detect the platform.</p></article>
-          <article><b>03</b><h3>Download</h3><p>Choose an available format and download.</p></article>
+          <article><b>03</b><h3>Choose & download</h3><p>Select MP4 video or MP3 music, then choose the format returned by the media engine.</p></article>
         </div>
       </section>
 
@@ -165,8 +237,8 @@ export default function Home() {
         <div><div className="eyebrow">SUPPORTED SOURCES</div><h2>One simple workflow for public video links.</h2></div>
         <div className="growthCards">
           <article><strong>01</strong><h3>Popular platforms</h3><p>Vidzora can analyze supported public links from services such as YouTube, Instagram, Facebook and TikTok.</p></article>
-          <article><strong>02</strong><h3>Quality when available</h3><p>After analysis, available formats are shown so you can choose the option provided for that source.</p></article>
-          <article><strong>03</strong><h3>Mobile-first</h3><p>Paste a link, review the available result and continue without creating an account.</p></article>
+          <article><strong>02</strong><h3>MP4 + MP3</h3><p>When the media engine returns both, users can switch between video and music without pasting the link again.</p></article>
+          <article><strong>03</strong><h3>Mobile-first</h3><p>After processing, the page gently scrolls to the result so the quality selector is immediately visible on phones.</p></article>
         </div>
       </section>
 
@@ -178,7 +250,7 @@ export default function Home() {
             ["Do you save my videos?", "Vidzora does not provide a personal video library or download history."],
             ["Which links work?", "Public links from supported platforms. Availability can change when platforms change their systems."],
             ["Why can a link fail?", "Private, deleted, region-restricted or unsupported links may not be downloadable."],
-            ["Can Vidzora make ₹1 crore?", "₹1 crore is a business target, not a guaranteed result. Revenue depends on real traffic, geography, ad demand, RPM/CPM, retention and compliant ad engagement."]
+            ["Can I download only music?", "Yes, when the connected media engine returns an audio URL, the MP3 Music tab appears and can be selected without processing the link again."]
           ].map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}
         </div>
       </section>
@@ -189,6 +261,7 @@ export default function Home() {
 
       <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
 
+      {sponsorHref && <DownloadSponsorModal href={sponsorHref} onContinue={continueDownload} onClose={() => setSponsorHref("")} />}
     </main>
   );
 }
