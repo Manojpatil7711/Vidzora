@@ -213,15 +213,20 @@ export default function Home() {
   function chooseFormat(format: Format) {
     setSelectedFormat(format);
     sponsorIndexRef.current = (sponsorIndexRef.current + 1) % sponsorLinks.length;
-    setSponsorHref(sponsorLinks[sponsorIndexRef.current]);
+    const sponsor = sponsorLinks[sponsorIndexRef.current];
+    const downloadUrl = "/api/file?url=" + encodeURIComponent(format.url);
+
+    // One user click: open the sponsored destination and start the media download.
+    // Both actions are initiated synchronously from the user's click to reduce popup blocking.
+    window.open(sponsor, "_blank", "noopener,noreferrer");
+    window.open(downloadUrl, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => window.location.reload(), 1200);
   }
 
   function continueDownload() {
     const target = selectedFormat?.url;
     setSponsorHref("");
     if (!target) return;
-    // Start the download in a new tab, then reset Vidzora to a clean state.
-    // No download history or URL is persisted in localStorage/sessionStorage.
     window.open("/api/file?url=" + encodeURIComponent(target), "_blank", "noopener,noreferrer");
     window.setTimeout(() => window.location.reload(), 900);
   }
