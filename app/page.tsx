@@ -235,7 +235,7 @@ export default function Home() {
     <main>
       <header className="nav">
         <a className="brand" href="/">Vidzora<span>•</span></a>
-        <nav><a href="#how">How it works</a><a href="#faq">FAQ</a></nav>
+        <nav><a href="/tools">Free Tools</a><a href="#how">How it works</a><a href="#faq">FAQ</a></nav>
       </header>
 
       <section className="hero">
