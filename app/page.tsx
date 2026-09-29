@@ -34,6 +34,56 @@ const sponsorLinks = [
 
 type Format = { label: string; url: string };
 
+function AdUnit({ variant }: { variant: "leaderboard" | "rail" | "native" }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const host = ref.current;
+    if (!host || host.dataset.loaded === "true") return;
+    host.dataset.loaded = "true";
+
+    const load = (src: string, attrs: Record<string, string> = {}) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      Object.entries(attrs).forEach(([key, value]) => script.setAttribute(key, value));
+      host.appendChild(script);
+    };
+
+    if (variant === "rail") {
+      const config = document.createElement("script");
+      config.text = `atOptions = { 'key' : 'c6cb4978ec0abd9a946ab81ad19949df', 'format' : 'iframe', 'height' : 300, 'width' : 160, 'params' : {} };`;
+      host.appendChild(config);
+      load("https://mergerindirect.com/c6cb4978ec0abd9a946ab81ad19949df/invoke.js");
+    } else if (variant === "leaderboard") {
+      const config = document.createElement("script");
+      config.text = `atOptions = { 'key' : 'b3cb606d29e82761d924c3596c020a6b', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };`;
+      host.appendChild(config);
+      load("https://mergerindirect.com/b3cb606d29e82761d924c3596c020a6b/invoke.js");
+    } else {
+      load("https://mergerindirect.com/6434934b5a2b0ca0af1a76e0e9f70834/invoke.js", {
+        "data-cfasync": "false"
+      });
+      const container = document.createElement("div");
+      container.id = "container-6434934b5a2b0ca0af1a76e0e9f70834";
+      container.className = "nativeAdContainer";
+      host.appendChild(container);
+    }
+
+    // Auxiliary network scripts are loaded once, after the main UI is ready.
+    if (variant === "native") {
+      load("https://mergerindirect.com/b9/ff/bc/b9ffbca321bc3df764cceba5eb902ea2.js");
+      load("https://mergerindirect.com/97/d2/e4/97d2e4b2177f582889d754c1e4096aca.js");
+    }
+  }, [variant]);
+
+  return (
+    <div ref={ref} className={`adSlot adSlot--${variant}`} aria-label="Advertisement">
+      <span className="adLabel">ADVERTISEMENT</span>
+    </div>
+  );
+}
+
 function isAudio(f: Format) {
   return /audio|mp3|music/i.test(f.label);
 }
@@ -210,6 +260,7 @@ export default function Home() {
             </button>
           ))}
         </div>
+        <div className="heroAdRail"><AdUnit variant="rail" /></div>
         <p className="microcopy">16 public media platforms detected by Vidzora. Actual download availability depends on the connected media engine and the source link. • Public links only • Use content you have permission to download.</p>
 
         {error && <div className="notice error">{error}</div>}
@@ -251,6 +302,7 @@ export default function Home() {
           </div>
 
           {!activeFormats.length && <div className="notice error">This source did not return a {mediaType.toUpperCase()} format.</div>}
+          <AdUnit variant="native" />
           <p className="microcopy downloadNote">{mediaType === "mp3" && audioLoading ? "Preparing MP3 audio…" : "Select MP4 or MP3, choose the available quality, then download. Sponsored offers rotate between download actions."}</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
         </div>}
