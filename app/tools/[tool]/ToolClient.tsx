@@ -79,7 +79,8 @@ async function imagesToPdf(files: File[]) {
     const page = out.addPage([width, height]);
     page.drawImage(img, { x: 0, y: 0, width, height });
   }
-  return new Blob([await out.save()], { type: "application/pdf" });
+  const bytes = await out.save();
+  return new Blob([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer], { type: "application/pdf" });
 }
 
 async function mergePdfs(files: File[]) {
