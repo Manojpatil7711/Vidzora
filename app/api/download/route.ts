@@ -3,32 +3,35 @@ import { URL } from "node:url";
 
 const PLATFORM_HOSTS = {
   TikTok: new Set(["tiktok.com", "www.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"]),
-  Instagram: new Set(["instagram.com", "www.instagram.com"]),
+  Instagram: new Set(["instagram.com", "www.instagram.com", "m.instagram.com"]),
   YouTube: new Set(["youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com", "music.youtube.com"]),
-  Facebook: new Set(["facebook.com", "www.facebook.com", "m.facebook.com", "fb.watch"]),
-  X: new Set(["x.com", "www.x.com", "twitter.com", "www.twitter.com"]),
-  Reddit: new Set(["reddit.com", "www.reddit.com", "old.reddit.com", "redd.it"]),
+  Facebook: new Set(["facebook.com", "www.facebook.com", "m.facebook.com", "mbasic.facebook.com", "fb.watch"]),
+  X: new Set(["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com"]),
+  Reddit: new Set(["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com", "redd.it"]),
   Pinterest: new Set(["pinterest.com", "www.pinterest.com", "pin.it"]),
   Vimeo: new Set(["vimeo.com", "www.vimeo.com", "player.vimeo.com"]),
-  Dailymotion: new Set(["dailymotion.com", "www.dailymotion.com", "dai.ly"]),
-  Twitch: new Set(["twitch.tv", "www.twitch.tv", "clips.twitch.tv"]),
+  Dailymotion: new Set(["dailymotion.com", "www.dailymotion.com", "m.dailymotion.com", "dai.ly"]),
+  Twitch: new Set(["twitch.tv", "www.twitch.tv", "m.twitch.tv", "clips.twitch.tv"]),
   Tumblr: new Set(["tumblr.com", "www.tumblr.com"]),
-  Snapchat: new Set(["snapchat.com", "www.snapchat.com"]),
-  VK: new Set(["vk.com", "www.vk.com", "vkvideo.ru", "www.vkvideo.ru"]),
+  Snapchat: new Set(["snapchat.com", "www.snapchat.com", "story.snapchat.com"]),
+  VK: new Set(["vk.com", "www.vk.com", "m.vk.com", "vkvideo.ru", "www.vkvideo.ru"]),
   Streamable: new Set(["streamable.com", "www.streamable.com"]),
-  SoundCloud: new Set(["soundcloud.com", "www.soundcloud.com"]),
-  Rutube: new Set(["rutube.ru", "www.rutube.ru"])
+  SoundCloud: new Set(["soundcloud.com", "www.soundcloud.com", "m.soundcloud.com", "on.soundcloud.com"]),
+  Rutube: new Set(["rutube.ru", "www.rutube.ru", "m.rutube.ru"])
 } as const;
 
-const MAX_URL_LENGTH = 2048;
-const REQUEST_TIMEOUT = 15000;
+const MAX_URL_LENGTH = 4096;
+const REQUEST_TIMEOUT = 20000;
+
 function detectPlatform(raw: string) {
   try {
     const u = new URL(raw);
-    if (u.protocol !== "https:") return null;
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
     const host = u.hostname.toLowerCase();
+
     for (const [platform, hosts] of Object.entries(PLATFORM_HOSTS)) {
       if ((hosts as Set<string>).has(host)) return platform;
+      if (platform === "Tumblr" && (host.endsWith(".tumblr.com") || host === "tumblr.com")) return platform;
     }
     return null;
   } catch {
@@ -36,10 +39,20 @@ function detectPlatform(raw: string) {
   }
 }
 
+function normalizeSourceUrl(raw: string) {
+  const u = new URL(raw);
+  if (u.protocol === "http:") u.protocol = "https:";
+  return u.toString();
+}
+
 function normalizeFormats(data: any) {
   const formats: Array<{ label: string; url: string }> = [];
+  const seen = new Set<string>();
+
   const add = (label: string, url: unknown) => {
-    if (typeof url === "string" && /^https?:\/\//i.test(url)) formats.push({ label, url });
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url) || seen.has(url)) return;
+    seen.add(url);
+    formats.push({ label, url });
   };
 
   if (data?.status === "picker" && Array.isArray(data.picker)) {
@@ -48,7 +61,7 @@ function normalizeFormats(data: any) {
       else if (item?.type === "photo") add("Photo • Item " + (index + 1), item.url);
       else if (item?.type === "gif") add("GIF • Item " + (index + 1), item.url);
     });
-    if (data.audio) add("Audio", data.audio);
+    if (typeof data.audio === "string") add("Audio", data.audio);
     return formats;
   }
 
@@ -72,7 +85,7 @@ async function callProvider(raw: string, base: string, apiKey?: string) {
       headers: {
         "accept": "application/json",
         "content-type": "application/json",
-        ...(apiKey ? { Authorization: `Api-Key ${apiKey}` } : {})
+        ...(apiKey ? { Authorization: "Api-Key " + apiKey } : {})
       },
       body: JSON.stringify({
         url: raw,
@@ -89,14 +102,14 @@ async function callProvider(raw: string, base: string, apiKey?: string) {
 
     if (!response.ok) throw new Error("Download provider request failed.");
     const data = await response.json();
-    if (data?.status === "error") throw new Error("The provider could not process this link.");
+    if (data?.status === "error") throw new Error(data?.error?.code || "Provider could not process this link.");
 
     const formats = normalizeFormats(data);
     if (!formats.length) throw new Error("No downloadable format was returned.");
 
     return {
       formats,
-      title: data?.filename || "Ready to download",
+      title: data?.filename || data?.title || "Ready to download",
       thumbnail: data?.thumbnail
     };
   } finally {
@@ -117,7 +130,7 @@ async function callTikTokFallback(raw: string) {
 
     if (!response.ok) throw new Error("TikTok provider request failed.");
     const data = await response.json();
-    if (data?.code !== 0 || !data?.data) throw new Error("This video is unavailable or cannot be processed.");
+    if (data?.code !== 0 || !data?.data) throw new Error("TikTok video is unavailable.");
 
     const formats = [
       data.data.hdplay ? { label: "Video • HD", url: data.data.hdplay } : null,
@@ -141,25 +154,36 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const raw = typeof body?.url === "string" ? body.url.trim() : "";
+    const input = typeof body?.url === "string" ? body.url.trim() : "";
 
-    if (!raw || raw.length > MAX_URL_LENGTH) {
-      return NextResponse.json({ success: false, error: "Please enter a valid public video URL." }, { status: 400 });
+    if (!input || input.length > MAX_URL_LENGTH) {
+      return NextResponse.json({ success: false, error: "Please enter a valid public media URL." }, { status: 400 });
+    }
+
+    let raw: string;
+    try {
+      raw = normalizeSourceUrl(input);
+    } catch {
+      return NextResponse.json({ success: false, error: "Please enter a valid public media URL." }, { status: 400 });
     }
 
     const platform = detectPlatform(raw);
     if (!platform) {
-      return NextResponse.json({ success: false, error: "Unsupported link. Paste a public video URL from a supported platform." }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Unsupported link. Paste a public link from one of the 16 supported platforms." }, { status: 400 });
     }
 
-    const providers: Array<{ base: string; key: string | undefined }> = [];
+    const providers: Array<{ base: string; key?: string }> = [];
     const primaryBase = process.env.COBALT_API_URL?.trim() || "https://cobalt-production-45cd.up.railway.app/";
     const primaryKey = process.env.COBALT_API_KEY?.trim();
-    const secondaryBase = process.env.SECONDARY_PROVIDER_URL?.trim();
+    const secondaryBase = process.env.SECONDARY_PROVIDER_URL?.trim() || "https://api.cobalt.tools/";
     const secondaryKey = process.env.SECONDARY_PROVIDER_API_KEY?.trim();
 
-    if (primaryBase) providers.push({ base: primaryBase, key: primaryKey });
-    if (secondaryBase) providers.push({ base: secondaryBase, key: secondaryKey });
+    for (const provider of [
+      { base: primaryBase, key: primaryKey },
+      { base: secondaryBase, key: secondaryKey }
+    ]) {
+      if (provider.base && !providers.some((p) => p.base === provider.base)) providers.push(provider);
+    }
 
     type ProviderResult = Awaited<ReturnType<typeof callProvider>>;
     let result: ProviderResult | null = null;
@@ -187,8 +211,8 @@ export async function POST(req: Request) {
         success: false,
         platform,
         error: lastProviderError
-          ? platform + " provider failed. Please try again with another public link."
-          : platform + " is detected, but the media engine is not connected yet."
+          ? platform + " provider is temporarily unavailable. Please try again with another public link."
+          : platform + " was detected, but no media format was returned."
       }, { status: 503 });
     }
 
@@ -200,7 +224,7 @@ export async function POST(req: Request) {
       formats: result.formats
     });
   } catch (e: any) {
-    const message = e?.name === "AbortError" ? "The request timed out. Please try again." : e?.message || "Unable to process this link.";
+    const message = e?.name === "AbortError" ? "The media engine timed out. Please try again." : e?.message || "Unable to process this link.";
     return NextResponse.json({ success: false, error: message }, { status: 502 });
   }
 }
