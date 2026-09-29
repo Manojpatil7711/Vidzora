@@ -220,7 +220,10 @@ export default function Home() {
     const target = selectedFormat?.url;
     setSponsorHref("");
     if (!target) return;
+    // Start the download in a new tab, then reset Vidzora to a clean state.
+    // No download history or URL is persisted in localStorage/sessionStorage.
     window.open("/api/file?url=" + encodeURIComponent(target), "_blank", "noopener,noreferrer");
+    window.setTimeout(() => window.location.reload(), 900);
   }
 
   function copyVidzoraLink() {
