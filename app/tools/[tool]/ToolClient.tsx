@@ -80,7 +80,7 @@ async function imagesToPdf(files: File[]) {
     page.drawImage(img, { x: 0, y: 0, width, height });
   }
   const bytes = await out.save();
-  return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
+  const safeBuffer = new ArrayBuffer(bytes.byteLength);\n    new Uint8Array(safeBuffer).set(bytes);\n    return new Blob([safeBuffer], { type: "application/pdf" });
 }
 
 async function mergePdfs(files: File[]) {
