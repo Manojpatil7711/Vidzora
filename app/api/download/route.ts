@@ -152,6 +152,64 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
   }
 }
 
+async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "video") {
+  const match = raw.match(/(?:v=|youtu\.be\/|\/shorts\/)([A-Za-z0-9_-]{6,})/);
+  const videoId = match?.[1];
+  if (!videoId) throw new Error("YouTube video ID could not be extracted.");
+
+  const instances = [
+    process.env.PIPED_API_URL?.trim(),
+    "https://pipedapi.kavin.rocks",
+    "https://pipedapi.leptons.xyz"
+  ].filter((value): value is string => Boolean(value));
+
+  for (const base of [...new Set(instances)]) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    try {
+      const response = await fetch(base.replace(/\/$/, "") + "/streams/" + encodeURIComponent(videoId), {
+        headers: { "accept": "application/json", "user-agent": "Vidzora/1.0" },
+        signal: controller.signal,
+        cache: "no-store"
+      });
+      if (!response.ok) continue;
+      const data = await response.json();
+
+      if (mode === "audio") {
+        const audio = Array.isArray(data?.audioStreams)
+          ? data.audioStreams.find((s: any) => s?.url && /^https?:\/\//i.test(s.url))
+          : null;
+        if (audio?.url) {
+          return {
+            formats: [{ label: "Audio • MP3", url: audio.url }],
+            title: data?.title || "YouTube audio",
+            thumbnail: data?.thumbnailUrl
+          };
+        }
+      } else {
+        const streams = Array.isArray(data?.videoStreams) ? data.videoStreams : [];
+        const playable = streams
+          .filter((s: any) => s?.url && s?.mimeType === "video/mp4" && s?.videoOnly === false)
+          .sort((a: any, b: any) => (Number(b?.height) || 0) - (Number(a?.height) || 0));
+        if (playable.length) {
+          return {
+            formats: playable.slice(0, 5).map((s: any) => ({
+              label: "Video • " + (s.quality || ((s.height || 0) + "p")),
+              url: s.url
+            })),
+            title: data?.title || "YouTube video",
+            thumbnail: data?.thumbnailUrl
+          };
+        }
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  throw new Error("Piped YouTube fallback did not return a playable stream.");
+}
+
 async function callTikTokFallback(raw: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -231,6 +289,14 @@ export async function POST(req: Request) {
         if (result) break;
       } catch (error: any) {
         lastProviderError = error?.message || "Provider failed.";
+      }
+    }
+
+    if (!result && platform === "YouTube") {
+      try {
+        result = await callPipedYouTubeFallback(raw, mode);
+      } catch (error: any) {
+        lastProviderError = error?.message || "YouTube fallback provider failed.";
       }
     }
 
