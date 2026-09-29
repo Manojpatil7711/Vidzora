@@ -316,6 +316,21 @@ export default function Home() {
         </div>}
       </section>
 
+      <section id="free-tools" className="section homeFreeTools">
+        <div>
+          <div className="eyebrow">FREE TOOLS</div>
+          <h2>More free tools, right here.</h2>
+          <p className="microcopy">Compress, convert, crop, resize and work with PDFs without an account.</p>
+          <a className="freeToolsCta" href="/tools">View all free tools →</a>
+        </div>
+        <div className="homeToolCards">
+          <a href="/tools/image-compressor"><strong>🗜️ Image Compressor</strong><span>Compress JPG, PNG & WebP</span></a>
+          <a href="/tools/image-resizer"><strong>↔️ Image Resizer</strong><span>Resize images exactly</span></a>
+          <a href="/tools/jpg-to-pdf"><strong>📄 JPG to PDF</strong><span>Turn images into PDF</span></a>
+          <a href="/tools/compress-pdf"><strong>📦 Compress PDF</strong><span>Reduce PDF file size</span></a>
+        </div>
+      </section>
+
       <section id="how" className="section">
         <div><div className="eyebrow">HOW IT WORKS</div><h2>Three steps. No account.</h2></div>
         <div className="steps">
