@@ -235,7 +235,7 @@ export default function Home() {
     <main>
       <header className="nav">
         <a className="brand" href="/">Vidzora<span>•</span></a>
-        <nav><a className="homeToolsLink" href="/tools"><strong>FREE TOOLS</strong><small>Compress • Convert • PDF • Crop</small></a><a href="#how">How it works</a><a href="#faq">FAQ</a></nav>
+        <nav><a className="homeDownloaderLink" href="/"><strong>DOWNLOADER</strong></a><a className="homeToolsLink" href="/tools"><strong>FREE TOOLS</strong><small>Compress • Convert • PDF • Crop</small></a><a href="#how">How it works</a><a href="#faq">FAQ</a></nav>
       </header>
 
       <section className="hero">
