@@ -220,7 +220,7 @@ export default function Home() {
     const target = selectedFormat?.url;
     setSponsorHref("");
     if (!target) return;
-    window.open(target, "_blank", "noopener,noreferrer");
+    window.open("/api/file?url=" + encodeURIComponent(target), "_blank", "noopener,noreferrer");
   }
 
   function copyVidzoraLink() {
