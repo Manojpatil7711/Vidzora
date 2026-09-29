@@ -23,6 +23,8 @@ const cfg: Record<K, { t: string; d: string; a: string; m?: boolean }> = {
   "image-cropper": { t: "Image Cropper", d: "Crop an image and download the result.", a: "image/jpeg,image/png,image/webp" },
 };
 
+const toolSponsorLinks = ["https://omg10.com/4/11918611","https://omg10.com/4/11918610","https://omg10.com/4/11918605","https://omg10.com/4/11565407","https://omg10.com/4/11566837","https://omg10.com/4/11587733"];
+
 function dl(b: Blob, n: string) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(b);
@@ -131,6 +133,8 @@ export default function ToolClient({ tool }: { tool: K }) {
   const [q, setQ] = useState(75);
   const [fmt, setFmt] = useState("image/jpeg");
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 800, h: 600 });
+  const [showSponsor, setShowSponsor] = useState(false);
+  const [sponsorIndex, setSponsorIndex] = useState(0);
 
   async function run() {
     if (!files.length) return setMsg("Choose a file first.");
@@ -227,10 +231,11 @@ export default function ToolClient({ tool }: { tool: K }) {
           <label>Width<input type="number" value={crop.w} onChange={e => setCrop({ ...crop, w: +e.target.value })} /></label>
           <label>Height<input type="number" value={crop.h} onChange={e => setCrop({ ...crop, h: +e.target.value })} /></label>
         </div>}
-        <button className="toolRun" disabled={busy} onClick={run}>{busy ? "Processing…" : "Process & Download"}</button>
+        <button className="toolRun" disabled={busy} onClick={() => { setSponsorIndex(i => (i + 1) % toolSponsorLinks.length); setShowSponsor(true); }}>{busy ? "Processing…" : "Generate"}</button>
         {msg && <div className="toolMessage">{msg}</div>}
       </div>
       <div className="toolTrust"><b>✓ Simple</b><b>✓ Mobile friendly</b><b>✓ No account</b></div>
+      {showSponsor && <div className="sponsorModal" role="dialog" aria-modal="true" aria-label="Sponsored offer"><div className="sponsorModalCard"><div className="sponsorBannerLabel">ADVERTISEMENT</div><h3>Support Vidzora</h3><p>Vidzora is free to use. You may view this sponsored offer, or continue directly to generate your file.</p><a href={toolSponsorLinks[sponsorIndex]} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">View sponsor ↗</a><div className="sponsorModalActions"><button type="button" className="sponsorModalContinue" onClick={() => { setShowSponsor(false); void run(); }}>Generate file</button><button type="button" className="sponsorModalClose" onClick={() => setShowSponsor(false)}>Cancel</button></div></div></div>}
     </section>
   </main>;
 }
