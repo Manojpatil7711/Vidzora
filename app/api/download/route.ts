@@ -40,8 +40,38 @@ function detectPlatform(raw: string) {
 }
 
 function normalizeSourceUrl(raw: string) {
-  const u = new URL(raw);
+  const u = new URL(raw.trim());
   if (u.protocol === "http:") u.protocol = "https:";
+
+  const host = u.hostname.toLowerCase();
+
+  // Normalize YouTube Shorts and short links to a canonical watch URL.
+  // This keeps the original query parameters out of the media-engine URL
+  // while preserving the actual YouTube video ID.
+  if (host === "youtube.com" || host === "www.youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+    const shortsMatch = u.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{6,})/);
+    if (shortsMatch?.[1]) {
+      return `https://www.youtube.com/watch?v=${shortsMatch[1]}`;
+    }
+
+    const embedMatch = u.pathname.match(/^\/embed\/([A-Za-z0-9_-]{6,})/);
+    if (embedMatch?.[1]) {
+      return `https://www.youtube.com/watch?v=${embedMatch[1]}`;
+    }
+
+    const videoId = u.searchParams.get("v");
+    if (videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)) {
+      return `https://www.youtube.com/watch?v=${videoId}`;
+    }
+  }
+
+  if (host === "youtu.be") {
+    const videoId = u.pathname.split("/").filter(Boolean)[0];
+    if (videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)) {
+      return `https://www.youtube.com/watch?v=${videoId}`;
+    }
+  }
+
   return u.toString();
 }
 
