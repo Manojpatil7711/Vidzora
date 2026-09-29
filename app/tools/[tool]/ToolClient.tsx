@@ -70,13 +70,13 @@ async function imageAsJpegBytes(file: File) {
   return { bytes: new Uint8Array(await b.arrayBuffer()), width: x.width, height: x.height };
 }
 
-async function bytesToPdfBlob(bytes: Uint8Array<ArrayBufferLike>) {
+function bytesToPdfBlob(bytes: Uint8Array<ArrayBufferLike>) {
   const buffer = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buffer).set(bytes);
   return new Blob([buffer], { type: "application/pdf" });
 }
 
-function imagesToPdf(files: File[]) {
+async function imagesToPdf(files: File[]) {
   const { PDFDocument } = await pdfLib();
   const out = await PDFDocument.create();
   for (const file of files) {
@@ -85,10 +85,7 @@ function imagesToPdf(files: File[]) {
     const page = out.addPage([width, height]);
     page.drawImage(img, { x: 0, y: 0, width, height });
   }
-  const bytes = await out.save();
-  const safeBuffer = new ArrayBuffer(bytes.byteLength);
-    new Uint8Array(safeBuffer).set(bytes);
-    return new Blob([safeBuffer], { type: "application/pdf" });
+  return bytesToPdfBlob(await out.save());
 }
 
 async function mergePdfs(files: File[]) {
