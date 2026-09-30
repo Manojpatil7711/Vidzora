@@ -21,7 +21,7 @@ const PLATFORM_HOSTS = {
 } as const;
 
 const MAX_URL_LENGTH = 4096;
-const REQUEST_TIMEOUT = 20000;
+const REQUEST_TIMEOUT = 4000;
 
 function detectPlatform(raw: string) {
   try {
@@ -52,7 +52,7 @@ async function resolveRedditShareUrl(raw: string) {
     // First try the real redirect. Reddit /s/ links are redirect wrappers;
     // the redirect target is the canonical /comments/... post URL.
     const redirectController = new AbortController();
-    const redirectTimer = setTimeout(() => redirectController.abort(), 8000);
+    const redirectTimer = setTimeout(() => redirectController.abort(), REQUEST_TIMEOUT);
     try {
       const response = await fetch(u.toString(), {
         method: "GET",
@@ -79,7 +79,7 @@ async function resolveRedditShareUrl(raw: string) {
     // Reddit share URLs can expose the canonical post through their JSON
     // representation even when the normal HTML request stays on /s/.
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
     try {
       const jsonUrl = new URL(u.toString());
       jsonUrl.pathname = jsonUrl.pathname.replace(/\/$/, "") + ".json";
@@ -114,7 +114,7 @@ async function resolveRedditShareUrl(raw: string) {
     // Second path: Reddit's oEmbed endpoint can resolve /s/ links without relying on
     // the normal share-page redirect. This is intentionally independent of Jina/HTML.
     const oembedController = new AbortController();
-    const oembedTimer = setTimeout(() => oembedController.abort(), 8000);
+    const oembedTimer = setTimeout(() => oembedController.abort(), REQUEST_TIMEOUT);
     try {
       const oembedUrl = "https://www.reddit.com/oembed?url=" + encodeURIComponent(u.toString()) + "&format=json";
       const response = await fetch(oembedUrl, {
@@ -156,7 +156,7 @@ async function resolveRedditShareUrl(raw: string) {
     // Alternate resolver: use a reader proxy when Reddit blocks hosted-server requests.
     // String-based extraction avoids fragile URL-regex build failures.
     const proxyController = new AbortController();
-    const proxyTimer = setTimeout(() => proxyController.abort(), 8000);
+    const proxyTimer = setTimeout(() => proxyController.abort(), REQUEST_TIMEOUT);
     try {
       const proxyUrl = "https://r.jina.ai/http://" + u.hostname + u.pathname + u.search;
       const proxyResponse = await fetch(proxyUrl, {
@@ -183,7 +183,7 @@ async function resolveRedditShareUrl(raw: string) {
     }
 
     const fallbackController = new AbortController();
-    const fallbackTimer = setTimeout(() => fallbackController.abort(), 8000);
+    const fallbackTimer = setTimeout(() => fallbackController.abort(), REQUEST_TIMEOUT);
     try {
       const response = await fetch(u.toString(), {
         method: "GET",
