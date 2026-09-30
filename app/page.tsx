@@ -214,18 +214,28 @@ export default function Home() {
     setSelectedFormat(format);
     sponsorIndexRef.current = (sponsorIndexRef.current + 1) % sponsorLinks.length;
     const sponsor = sponsorLinks[sponsorIndexRef.current];
-    setSponsorHref(sponsor);
 
-    // Download is always independent of the sponsored ad. Opening the ad must
-    // never block, cancel, or delay the user's selected download.
-    window.open("/api/file?url=" + encodeURIComponent(format.url), "_blank", "noopener,noreferrer");
+    // Download ALWAYS has first priority. Start the same-origin attachment
+    // immediately from the user's click, then open the sponsored destination
+    // separately. Closing/backing out of the ad cannot cancel the download.
+    const downloadHref = "/api/file?url=" + encodeURIComponent(format.url);
+    const download = document.createElement("a");
+    download.href = downloadHref;
+    download.rel = "noopener";
+    document.body.appendChild(download);
+    download.click();
+    download.remove();
+
+    // The sponsor is independent of the download. If the browser blocks a
+    // secondary popup, the download has already been started successfully.
+    window.setTimeout(() => {
+      const sponsorWindow = window.open(sponsor, "_blank", "noopener,noreferrer");
+      if (!sponsorWindow) setSponsorHref(sponsor);
+    }, 0);
   }
 
   function continueDownload() {
-    const target = selectedFormat?.url;
     setSponsorHref("");
-    if (!target) return;
-    window.open("/api/file?url=" + encodeURIComponent(target), "_blank", "noopener,noreferrer");
   }
 
   function copyVidzoraLink() {
