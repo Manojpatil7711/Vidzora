@@ -376,7 +376,7 @@ async function callRedditFallback(raw: string) {
       const source = item?.s || item?.source || {};
       const candidates = [source?.mp4, source?.u, source?.gif, item?.o?.mp4, item?.o?.u];
       for (const value of candidates) {
-        if (typeof value === "string" && value.startsWith("http://") || value.startsWith("https://")) {
+        if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
           formats.push({ label: "Media", url: value.replace(/&amp;/g, "&") });
           break;
         }
@@ -385,7 +385,7 @@ async function callRedditFallback(raw: string) {
 
     if (Array.isArray(post?.mediaUrls)) {
       for (const url of post.mediaUrls) {
-        if (typeof url === "string" && /^https?:\\/\\//i.test(url)) formats.push({ label: "Media", url });
+        if (typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) formats.push({ label: "Media", url });
       }
     }
 
