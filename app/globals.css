@@ -41,7 +41,7 @@ footer{max-width:1100px;margin:auto;padding:35px 24px 50px;color:#666;display:fl
 
 .adSlot{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(255,255,255,.018);border:1px solid #1d1d1d;border-radius:14px;min-height:0}
 .adLabel{position:absolute;top:5px;left:8px;z-index:2;font-size:8px;letter-spacing:.12em;color:#555;font-weight:800;pointer-events:none}
-.adSlot--leaderboard{width:320px;height:62px;margin:16px auto 4px}
+.downloaderBanner{display:flex;justify-content:center;width:100%;margin:14px auto 2px}.adSlot--leaderboard{width:320px;height:58px;margin:0 auto}.adSlot--leaderboard iframe{max-width:320px}
 .adSlot--leaderboard iframe{max-width:320px}
 .heroAdRail{position:absolute;left:calc(50% + 510px);top:250px;width:160px;display:flex;justify-content:center}
 .adSlot--rail{width:160px;height:300px;border-radius:12px}
