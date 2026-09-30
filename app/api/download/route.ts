@@ -292,7 +292,8 @@ export async function POST(req: Request) {
 
     let raw: string;
     try {
-      raw = await resolveRedditShareUrl(input);\n      raw = normalizeSourceUrl(raw);
+      raw = await resolveRedditShareUrl(input);
+      raw = normalizeSourceUrl(raw);
     } catch {
       return NextResponse.json({ success: false, error: "Please enter a valid public media URL." }, { status: 400 });
     }
