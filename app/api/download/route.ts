@@ -376,7 +376,7 @@ async function callRedditFallback(raw: string) {
       const source = item?.s || item?.source || {};
       const candidates = [source?.mp4, source?.u, source?.gif, item?.o?.mp4, item?.o?.u];
       for (const value of candidates) {
-        if (typeof value === "string" && /^https?:\\/\\//i.test(value)) {
+        if (typeof value === "string" && value.startsWith("http://") || value.startsWith("https://")) {
           formats.push({ label: "Media", url: value.replace(/&amp;/g, "&") });
           break;
         }
