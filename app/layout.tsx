@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     "download public videos",
     "Vidzora"
   ],
-  alternates: { canonical: "/" },
+  alternates: { canonical: siteUrl + "/" },
   openGraph: {
     title: "Vidzora — Fast Social Video Downloader",
     description:
