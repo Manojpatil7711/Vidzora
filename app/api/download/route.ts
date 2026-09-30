@@ -80,7 +80,7 @@ async function resolveRedditShareUrl(raw: string) {
             (resolved.hostname === "www.reddit.com" ||
               resolved.hostname === "reddit.com" ||
               resolved.hostname === "old.reddit.com") &&
-            /^\\/r\\/[^/]+\\/comments\\//.test(resolved.pathname)
+            /^\/r\/[^/]+\/comments\//.test(resolved.pathname)
           ) {
             return resolved.toString();
           }
