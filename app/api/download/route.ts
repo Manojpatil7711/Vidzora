@@ -416,7 +416,7 @@ async function callRedditFallback(raw: string) {
       "https://api.reddit.com" + basePath + ".json?raw_json=1"
     ];
 
-    // Hosted/serverless IPs can receive Reddit 403/429 responses. Jina is used
+    // Reddit direct endpoints can return 403/429 from hosted/serverless IPs. Jina is used
     // only as a read-through fallback for the same public Reddit JSON endpoint;
     // it does not become the primary media provider.
     const jinaApiCandidates = directApiCandidates.map((endpoint) =>
