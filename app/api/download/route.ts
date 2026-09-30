@@ -63,9 +63,31 @@ async function resolveRedditShareUrl(raw: string) {
         cache: "no-store"
       });
 
-      // Reddit /s/ links are redirect/share URLs. The final URL is the
-      // canonical post URL that media providers can process.
+      // Reddit /s/ links are share URLs. Depending on Reddit's response,
+      // the HTTP URL may remain unchanged, so also inspect canonical/og:url.
       if (response.url && response.url !== u.toString()) return response.url;
+
+      const html = await response.text();
+      const canonical =
+        html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)?.[1] ||
+        html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
+        html.match(/<meta[^>]+name=["']twitter:url["'][^>]+content=["']([^"']+)["']/i)?.[1];
+
+      if (canonical) {
+        try {
+          const resolved = new URL(canonical, u.origin);
+          if (
+            (resolved.hostname === "www.reddit.com" ||
+              resolved.hostname === "reddit.com" ||
+              resolved.hostname === "old.reddit.com") &&
+            /^\\/r\\/[^/]+\\/comments\\//.test(resolved.pathname)
+          ) {
+            return resolved.toString();
+          }
+        } catch {
+          // Fall through to the original share URL.
+        }
+      }
     } finally {
       clearTimeout(timer);
     }
