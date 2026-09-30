@@ -84,7 +84,35 @@ async function resolveRedditShareUrl(raw: string) {
       clearTimeout(timer);
     }
 
-    // Keep the resolver simple and build-safe: Reddit JSON first, then direct HTML.
+    // Alternate resolver: use a reader proxy when Reddit blocks hosted-server requests.
+    // String-based extraction avoids fragile URL-regex build failures.
+    const proxyController = new AbortController();
+    const proxyTimer = setTimeout(() => proxyController.abort(), 8000);
+    try {
+      const proxyUrl = "https://r.jina.ai/http://" + u.hostname + u.pathname + u.search;
+      const proxyResponse = await fetch(proxyUrl, {
+        headers: { "accept": "text/plain", "user-agent": "Vidzora/1.0" },
+        signal: proxyController.signal,
+        cache: "no-store"
+      });
+      if (proxyResponse.ok) {
+        const text = await proxyResponse.text();
+        const marker = "https://www.reddit.com/r/";
+        const start = text.indexOf(marker);
+        if (start >= 0) {
+          const tail = text.slice(start);
+          const ends = [tail.indexOf("\\n"), tail.indexOf(" "), tail.indexOf(")"), tail.indexOf("\\\"")].filter((n) => n > 0);
+          const end = ends.length ? Math.min(...ends) : tail.length;
+          const candidate = tail.slice(0, end).replace(/[.,;]+$/, "");
+          if (candidate.includes("/comments/")) return candidate;
+        }
+      }
+    } catch {
+      // Continue to direct HTML resolution.
+    } finally {
+      clearTimeout(proxyTimer);
+    }
+
     const fallbackController = new AbortController();
     const fallbackTimer = setTimeout(() => fallbackController.abort(), 8000);
     try {
@@ -342,15 +370,22 @@ async function callRedditFallback(raw: string) {
       });
     }
 
-    const mediaUrls = Array.isArray(post?.media_metadata)
-      ? []
-      : Array.isArray(post?.mediaUrls)
-        ? post.mediaUrls
-        : [];
+    // Reddit galleries expose media_metadata as an object keyed by media id.
+    const metadata = post?.media_metadata && typeof post.media_metadata === "object" ? Object.values(post.media_metadata) : [];
+    for (const item of metadata as any[]) {
+      const source = item?.s || item?.source || {};
+      const candidates = [source?.mp4, source?.u, source?.gif, item?.o?.mp4, item?.o?.u];
+      for (const value of candidates) {
+        if (typeof value === "string" && /^https?:\\/\\//i.test(value)) {
+          formats.push({ label: "Media", url: value.replace(/&amp;/g, "&") });
+          break;
+        }
+      }
+    }
 
-    for (const url of mediaUrls) {
-      if (typeof url === "string" && /^https?:\/\//i.test(url)) {
-        formats.push({ label: "Media", url });
+    if (Array.isArray(post?.mediaUrls)) {
+      for (const url of post.mediaUrls) {
+        if (typeof url === "string" && /^https?:\\/\\//i.test(url)) formats.push({ label: "Media", url });
       }
     }
 
