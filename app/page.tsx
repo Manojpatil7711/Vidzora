@@ -247,6 +247,7 @@ export default function Home() {
       </header>
 
       <section className="hero">
+        <div className="downloaderBanner"><AdUnit variant="leaderboard" /></div>
         <div className="eyebrow">FAST • PRIVATE • SIMPLE</div>
         <h1>Download social videos<br/><em>fast, clean, simple.</em></h1>
         <p className="sub">One downloader for public videos across major social and video platforms.</p>
@@ -268,7 +269,6 @@ export default function Home() {
             </button>
           ))}
         </div>
-        <div className="downloaderBanner"><AdUnit variant="leaderboard" /></div>
         <div className="heroAdRail"><AdUnit variant="rail" /></div>
         <p className="microcopy">16 public media platforms detected by Vidzora. Actual download availability depends on the connected media engine and the source link. • Public links only • Use content you have permission to download.</p>
 
