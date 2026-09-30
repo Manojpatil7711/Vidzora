@@ -342,7 +342,7 @@ async function callRedditFallback(raw: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
-    const basePath = u.pathname.replace(/\\/$/, "");
+    const basePath = u.pathname.endsWith("/") ? u.pathname.slice(0, -1) : u.pathname;
     const apiCandidates = [
       "https://www.reddit.com" + basePath + ".json?raw_json=1",
       "https://old.reddit.com" + basePath + ".json?raw_json=1",
