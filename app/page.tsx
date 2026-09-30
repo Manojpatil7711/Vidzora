@@ -108,12 +108,12 @@ function DownloadSponsorModal({
     <div className="sponsorModal" role="dialog" aria-modal="true" aria-label="Sponsored offer">
       <div className="sponsorModalCard">
         <div className="sponsorBannerLabel">ADVERTISEMENT</div>
-        <h3>Support Vidzora</h3>
-        <p>Vidzora is free to use. A sponsored offer is shown before the download. You can open it or continue directly.</p>
-        <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">View sponsor ↗</a>
+        <h3>Quick Download</h3>
+        <p>Please close/cancel the sponsored ad to continue to your selected download.</p>
+        <AdUnit variant="native" />
+        <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">Open sponsor ↗</a>
         <div className="sponsorModalActions">
-          <button type="button" className="sponsorModalContinue" onClick={onContinue}>Continue to download</button>
-          <button type="button" className="sponsorModalClose" onClick={onClose}>Cancel</button>
+          <button type="button" className="sponsorModalClose" onClick={onClose}>Cancel ad & Quick Download</button>
         </div>
       </div>
     </div>
