@@ -403,106 +403,110 @@ async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "
 }
 
 async function callRedditFallback(raw: string) {
-  if (raw.includes("/s/")) throw new Error("Reddit share link could not be resolved.");
+  if (raw.includes("/s/")) throw new Error("REDDIT_SHARE_UNRESOLVED");
 
   const u = new URL(raw);
   const commentsMatch = u.pathname.match(/\/comments\/([A-Za-z0-9]+)(?:\/[^/]*)?/);
-  if (!commentsMatch?.[1]) throw new Error("Reddit post ID could not be extracted.");
+  if (!commentsMatch?.[1]) throw new Error("REDDIT_POST_ID_MISSING");
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-  try {
-    const basePath = u.pathname.endsWith("/") ? u.pathname.slice(0, -1) : u.pathname;
-    const directApiCandidates = [
-      "https://www.reddit.com" + basePath + ".json?raw_json=1",
-      "https://old.reddit.com" + basePath + ".json?raw_json=1",
-      "https://api.reddit.com" + basePath + ".json?raw_json=1"
-    ];
+  const basePath = u.pathname.endsWith("/") ? u.pathname.slice(0, -1) : u.pathname;
+  const candidates = [
+    "https://www.reddit.com" + basePath + ".json?raw_json=1",
+    "https://old.reddit.com" + basePath + ".json?raw_json=1",
+    "https://api.reddit.com" + basePath + ".json?raw_json=1"
+  ];
 
-    // Hosted/serverless IPs can receive Reddit 403/429 responses. Jina is used
-    // only as a read-through fallback for the same public Reddit JSON endpoint;
-    // it does not become the primary media provider.
-    const jinaApiCandidates = directApiCandidates.map((endpoint) =>
-      "https://r.jina.ai/http://" + endpoint.replace(/^https?:\/\//, "")
-    );
+  const jinaCandidates = candidates.map((endpoint) =>
+    "https://r.jina.ai/http://" + endpoint.replace(/^https?:\/\//, "")
+  );
 
-    const apiCandidates = [...directApiCandidates, ...jinaApiCandidates];
+  const allCandidates = [...candidates, ...jinaCandidates];
+  let post: any = null;
+  let lastStatus = 0;
 
-    let post: any = null;
-    let lastStatus = 0;
-
-    for (const endpoint of apiCandidates) {
-      try {
-        const response = await fetch(endpoint, {
-          headers: {
-            accept: "application/json",
-            "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
-          },
-          signal: controller.signal,
-          cache: "no-store"
-        });
-        lastStatus = response.status;
-        if (!response.ok) continue;
-
-        const data = await response.json();
-        post = data?.[0]?.data?.children?.[0]?.data;
-        if (post) break;
-      } catch {
-        // Try the next Reddit API endpoint.
-      }
-    }
-
-    if (!post) {
-      throw new Error("Reddit post API unavailable (" + lastStatus + ").");
-    }
-    const media =
-      post?.secure_media?.reddit_video ||
-      post?.media?.reddit_video ||
-      post?.crosspost_parent_list?.[0]?.secure_media?.reddit_video ||
-      post?.crosspost_parent_list?.[0]?.media?.reddit_video;
-
-    const formats: Array<{ label: string; url: string }> = [];
-
-    if (typeof media?.fallback_url === "string" && /^https?:\/\//i.test(media.fallback_url)) {
-      formats.push({
-        label: "Video • Direct MP4",
-        url: media.fallback_url
+  // Resilient-provider rule: every upstream attempt gets its own timeout.
+  // A timed-out provider must never poison the next provider's AbortSignal.
+  for (const endpoint of allCandidates) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7000);
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          accept: "application/json",
+          "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
+        },
+        signal: controller.signal,
+        cache: "no-store"
       });
-    }
+      lastStatus = response.status;
+      if (!response.ok) continue;
 
-    // Reddit galleries expose media_metadata as an object keyed by media id.
-    const metadata = post?.media_metadata && typeof post.media_metadata === "object" ? Object.values(post.media_metadata) : [];
-    for (const item of metadata as any[]) {
-      const source = item?.s || item?.source || {};
-      const candidates = [source?.mp4, source?.u, source?.gif, item?.o?.mp4, item?.o?.u];
-      for (const value of candidates) {
-        if (typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://"))) {
-          formats.push({ label: "Media", url: value.replace(/&amp;/g, "&") });
-          break;
-        }
+      const data = await response.json();
+      const candidate = data?.[0]?.data?.children?.[0]?.data;
+      if (candidate) {
+        post = candidate;
+        break;
       }
+    } catch {
+      // Try the next isolated provider.
+    } finally {
+      clearTimeout(timer);
     }
-
-    if (Array.isArray(post?.mediaUrls)) {
-      for (const url of post.mediaUrls) {
-        if (typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) formats.push({ label: "Media", url });
-      }
-    }
-
-    if (!formats.length) {
-      const direct = typeof post?.url_overridden_by_dest === "string" ? post.url_overridden_by_dest : "";
-      if (/^https?:\/\//i.test(direct)) formats.push({ label: "Media", url: direct });
-    }
-
-    if (!formats.length) throw new Error("Reddit did not expose a direct media URL.");
-    return {
-      formats,
-      title: post?.title || "Reddit media",
-      thumbnail: post?.thumbnail && /^https?:\/\//i.test(post.thumbnail) ? post.thumbnail : undefined
-    };
-  } finally {
-    clearTimeout(timer);
   }
+
+  if (!post) throw new Error("REDDIT_POST_FETCH_FAILED_" + lastStatus);
+
+  const posts = [
+    post,
+    ...(Array.isArray(post?.crosspost_parent_list) ? post.crosspost_parent_list : [])
+  ];
+
+  const formats: Array<{ label: string; url: string }> = [];
+  const seen = new Set<string>();
+
+  const add = (label: string, value: unknown) => {
+    if (typeof value !== "string" || !/^https?:\/\//i.test(value)) return;
+    const url = value.replace(/&amp;/g, "&");
+    if (seen.has(url)) return;
+    seen.add(url);
+    formats.push({ label, url });
+  };
+
+  for (const item of posts) {
+    const media = item?.secure_media?.reddit_video || item?.media?.reddit_video;
+    add("Video • Direct MP4", media?.fallback_url);
+    add("Video • DASH", media?.dash_url);
+    add("Video • HLS", media?.hls_url);
+
+    if (Array.isArray(media?.mediaUrls)) {
+      for (const url of media.mediaUrls) add("Video • Media", url);
+    }
+
+    const metadata = item?.media_metadata && typeof item.media_metadata === "object"
+      ? Object.values(item.media_metadata)
+      : [];
+
+    for (const entry of metadata as any[]) {
+      const source = entry?.s || entry?.source || entry?.o || {};
+      add("Media", source?.mp4);
+      add("Media", source?.u);
+      add("Media", source?.gif);
+    }
+
+    if (Array.isArray(item?.mediaUrls)) {
+      for (const url of item.mediaUrls) add("Media", url);
+    }
+
+    add("Media • Destination", item?.url_overridden_by_dest);
+  }
+
+  if (!formats.length) throw new Error("REDDIT_NO_DIRECT_MEDIA");
+
+  return {
+    formats,
+    title: post?.title || "Reddit media",
+    thumbnail: post?.thumbnail && /^https?:\/\//i.test(post.thumbnail) ? post.thumbnail : undefined
+  };
 }
 
 async function callTikTokFallback(raw: string) {
@@ -579,12 +583,25 @@ export async function POST(req: Request) {
     let result: ProviderResult | null = null;
     let lastProviderError = "";
 
-    for (const provider of providers) {
+    // Provider cascade: use a platform-native path first where it is stronger,
+    // then fall back to the generic media engine. This avoids one broken provider
+    // becoming a single point of failure.
+    if (!result && platform === "Reddit" && mode === "video") {
       try {
-        result = await callProvider(raw, provider.base, provider.key, mode);
-        if (result) break;
+        result = await callRedditFallback(raw);
       } catch (error: any) {
-        lastProviderError = error?.message || "Provider failed.";
+        lastProviderError = error?.message || "Reddit native provider failed.";
+      }
+    }
+
+    if (!result) {
+      for (const provider of providers) {
+        try {
+          result = await callProvider(raw, provider.base, provider.key, mode);
+          if (result) break;
+        } catch (error: any) {
+          lastProviderError = error?.message || "Provider failed.";
+        }
       }
     }
 
@@ -596,7 +613,7 @@ export async function POST(req: Request) {
       }
     }
 
-    if (!result && platform === "Reddit") {
+    if (!result && platform === "Reddit" && mode === "audio") {
       try {
         result = await callRedditFallback(raw);
       } catch (error: any) {
