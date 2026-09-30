@@ -214,13 +214,7 @@ export default function Home() {
     setSelectedFormat(format);
     sponsorIndexRef.current = (sponsorIndexRef.current + 1) % sponsorLinks.length;
     const sponsor = sponsorLinks[sponsorIndexRef.current];
-    const downloadUrl = "/api/file?url=" + encodeURIComponent(format.url);
-
-    // One user click: open the sponsored destination and start the media download.
-    // Both actions are initiated synchronously from the user's click to reduce popup blocking.
-    window.open(sponsor, "_blank", "noopener,noreferrer");
-    window.open(downloadUrl, "_blank", "noopener,noreferrer");
-    window.setTimeout(() => window.location.reload(), 1200);
+    setSponsorHref(sponsor);
   }
 
   function continueDownload() {
@@ -228,7 +222,6 @@ export default function Home() {
     setSponsorHref("");
     if (!target) return;
     window.open("/api/file?url=" + encodeURIComponent(target), "_blank", "noopener,noreferrer");
-    window.setTimeout(() => window.location.reload(), 900);
   }
 
   function copyVidzoraLink() {
