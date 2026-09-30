@@ -39,6 +39,42 @@ function detectPlatform(raw: string) {
   }
 }
 
+async function resolveRedditShareUrl(raw: string) {
+  try {
+    const u = new URL(raw.trim());
+    const host = u.hostname.toLowerCase();
+    const isRedditShare =
+      (host === "reddit.com" || host === "www.reddit.com" || host === "old.reddit.com" || host === "m.reddit.com") &&
+      /\/s\/[A-Za-z0-9_-]+/.test(u.pathname);
+
+    if (!isRedditShare) return raw;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(u.toString(), {
+        method: "GET",
+        headers: {
+          accept: "text/html,application/xhtml+xml",
+          "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
+        },
+        redirect: "follow",
+        signal: controller.signal,
+        cache: "no-store"
+      });
+
+      // Reddit /s/ links are redirect/share URLs. The final URL is the
+      // canonical post URL that media providers can process.
+      if (response.url && response.url !== u.toString()) return response.url;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    // Keep the original URL so the normal provider flow can still try it.
+  }
+  return raw;
+}
+
 function normalizeSourceUrl(raw: string) {
   const u = new URL(raw.trim());
   if (u.protocol === "http:") u.protocol = "https:";
@@ -256,7 +292,7 @@ export async function POST(req: Request) {
 
     let raw: string;
     try {
-      raw = normalizeSourceUrl(input);
+      raw = await resolveRedditShareUrl(input);\n      raw = normalizeSourceUrl(raw);
     } catch {
       return NextResponse.json({ success: false, error: "Please enter a valid public media URL." }, { status: 400 });
     }
