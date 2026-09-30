@@ -84,6 +84,48 @@ async function resolveRedditShareUrl(raw: string) {
       clearTimeout(timer);
     }
 
+    // Second path: Reddit's oEmbed endpoint can resolve /s/ links without relying on
+    // the normal share-page redirect. This is intentionally independent of Jina/HTML.
+    const oembedController = new AbortController();
+    const oembedTimer = setTimeout(() => oembedController.abort(), 8000);
+    try {
+      const oembedUrl = "https://www.reddit.com/oembed?url=" + encodeURIComponent(u.toString()) + "&format=json";
+      const response = await fetch(oembedUrl, {
+        headers: {
+          accept: "application/json",
+          "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
+        },
+        signal: oembedController.signal,
+        cache: "no-store"
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const html = typeof data?.html === "string" ? data.html : "";
+        const embedMarker = 'data-embed-url="';
+        const start = html.indexOf(embedMarker);
+        if (start >= 0) {
+          const valueStart = start + embedMarker.length;
+          const valueEnd = html.indexOf('"', valueStart);
+          if (valueEnd > valueStart) {
+            const candidate = html.slice(valueStart, valueEnd).replace(/&amp;/g, "&");
+            if (candidate.includes("/comments/")) return candidate;
+          }
+        }
+        const redditUrlStart = html.indexOf("https://www.reddit.com/r/");
+        if (redditUrlStart >= 0) {
+          const tail = html.slice(redditUrlStart);
+          const endCandidates = [tail.indexOf("\\\""), tail.indexOf("'"), tail.indexOf(" "), tail.indexOf(">")].filter((n) => n > 0);
+          const end = endCandidates.length ? Math.min(...endCandidates) : tail.length;
+          const candidate = tail.slice(0, end).replace(/&amp;/g, "&");
+          if (candidate.includes("/comments/")) return candidate;
+        }
+      }
+    } catch {
+      // Continue to Jina/direct HTML resolution.
+    } finally {
+      clearTimeout(oembedTimer);
+    }
+
     // Alternate resolver: use a reader proxy when Reddit blocks hosted-server requests.
     // String-based extraction avoids fragile URL-regex build failures.
     const proxyController = new AbortController();
