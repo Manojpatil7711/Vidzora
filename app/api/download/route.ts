@@ -84,47 +84,7 @@ async function resolveRedditShareUrl(raw: string) {
       clearTimeout(timer);
     }
 
-    // Cloud/server requests to Reddit share URLs can be blocked with 403.
-    // Use a reader proxy only as a resolver fallback; the media request still
-    // goes through the normal Reddit JSON/provider chain.
-    const readerController = new AbortController();
-    const readerTimer = setTimeout(() => readerController.abort(), 10000);
-    try {
-      const readerUrl = "https://r.jina.ai/http://" + u.host + u.pathname + u.search;
-      const readerResponse = await fetch(readerUrl, {
-        headers: {
-          accept: "text/plain",
-          "user-agent": "Vidzora/1.0"
-        },
-        redirect: "follow",
-        signal: readerController.signal,
-        cache: "no-store"
-      });
-
-      if (readerResponse.ok) {
-        const readerText = await readerResponse.text();
-        const candidates = [
-          readerText.match(/https?:\\/\\/www\\.reddit\\.com\\/r\\/[^\\s)"']+\\/comments\\/[A-Za-z0-9]+[^\\s)"']*/i)?.[0],
-          readerText.match(/https?:\\/\\/reddit\\.com\\/r\\/[^\\s)"']+\\/comments\\/[A-Za-z0-9]+[^\\s)"']*/i)?.[0]
-        ].filter(Boolean) as string[];
-
-        for (const candidate of candidates) {
-          try {
-            const resolved = new URL(candidate);
-            if (/^\\/r\\/[^/]+\\/comments\\//.test(resolved.pathname)) {
-              return resolved.toString();
-            }
-          } catch {
-            // Continue to the next resolver.
-          }
-        }
-      }
-    } catch {
-      // Continue to Reddit's direct resolver.
-    } finally {
-      clearTimeout(readerTimer);
-    }
-
+    // Keep the resolver simple and build-safe: Reddit JSON first, then direct HTML.
     const fallbackController = new AbortController();
     const fallbackTimer = setTimeout(() => fallbackController.abort(), 8000);
     try {
