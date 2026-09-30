@@ -23,13 +23,13 @@ const PLATFORM_HOSTS = {
 const MAX_URL_LENGTH = 4096;
 const REQUEST_TIMEOUT = 4000;
 const REDDIT_RESOLVE_TIMEOUT = 12000;
+const REDDIT_PROVIDER_TIMEOUT = 7000;
 
 function detectPlatform(raw: string) {
   try {
     const u = new URL(raw);
     if (u.protocol !== "https:" && u.protocol !== "http:") return null;
     const host = u.hostname.toLowerCase();
-
     for (const [platform, hosts] of Object.entries(PLATFORM_HOSTS)) {
       if ((hosts as Set<string>).has(host)) return platform;
       if (platform === "Tumblr" && (host.endsWith(".tumblr.com") || host === "tumblr.com")) return platform;
@@ -40,60 +40,49 @@ function detectPlatform(raw: string) {
   }
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal, cache: "no-store" });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function resolveRedditShareUrl(raw: string) {
   try {
     const u = new URL(raw.trim());
     const host = u.hostname.toLowerCase();
-    const isRedditShare =
-      (host === "reddit.com" || host === "www.reddit.com" || host === "old.reddit.com" || host === "m.reddit.com") &&
+    const isShare =
+      ["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com"].includes(host) &&
       /\/s\/[A-Za-z0-9_-]+/.test(u.pathname);
+    if (!isShare) return raw;
 
-    if (!isRedditShare) return raw;
-
-    // First try the real redirect. Reddit /s/ links are redirect wrappers;
-    // the redirect target is the canonical /comments/... post URL.
-    const redirectController = new AbortController();
-    const redirectTimer = setTimeout(() => redirectController.abort(), REDDIT_RESOLVE_TIMEOUT);
     try {
-      const response = await fetch(u.toString(), {
-        method: "GET",
+      const response = await fetchWithTimeout(u.toString(), {
         headers: {
           accept: "text/html,application/xhtml+xml",
           "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
         },
-        redirect: "follow",
-        signal: redirectController.signal,
-        cache: "no-store"
-      });
-      if (response.url) {
-        const resolved = new URL(response.url);
-        if (/\/r\/[^/]+\/comments\//.test(resolved.pathname)) {
-          return resolved.toString();
-        }
-      }
-    } catch {
-      // Continue with Reddit JSON/oEmbed/proxy resolution.
-    } finally {
-      clearTimeout(redirectTimer);
-    }
+        redirect: "follow"
+      }, REDDIT_RESOLVE_TIMEOUT);
 
-    // Reddit share URLs can expose the canonical post through their JSON
-    // representation even when the normal HTML request stays on /s/.
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REDDIT_RESOLVE_TIMEOUT);
+      if (response.url && /\/r\/[^/]+\/comments\//.test(new URL(response.url).pathname)) {
+        return response.url;
+      }
+    } catch {}
+
     try {
       const jsonUrl = new URL(u.toString());
       jsonUrl.pathname = jsonUrl.pathname.replace(/\/$/, "") + ".json";
-      const response = await fetch(jsonUrl.toString(), {
-        method: "GET",
+      const response = await fetchWithTimeout(jsonUrl.toString(), {
         headers: {
           accept: "application/json",
           "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
         },
-        redirect: "follow",
-        signal: controller.signal,
-        cache: "no-store"
-      });
+        redirect: "follow"
+      }, REDDIT_RESOLVE_TIMEOUT);
 
       if (response.ok) {
         const data = await response.json();
@@ -102,166 +91,72 @@ async function resolveRedditShareUrl(raw: string) {
         if (/^\/r\/[^/]+\/comments\//.test(permalink)) {
           return new URL(permalink, "https://www.reddit.com").toString();
         }
-        if (response.url && /\/comments\//.test(new URL(response.url).pathname)) {
-          return response.url.replace(/\.json(?:\?.*)?$/, "");
-        }
       }
-    } catch {
-      // Fall through to the normal redirect/HTML resolver.
-    } finally {
-      clearTimeout(timer);
-    }
+    } catch {}
 
-    // Second path: Reddit's oEmbed endpoint can resolve /s/ links without relying on
-    // the normal share-page redirect. This is intentionally independent of Jina/HTML.
-    const oembedController = new AbortController();
-    const oembedTimer = setTimeout(() => oembedController.abort(), REDDIT_RESOLVE_TIMEOUT);
     try {
-      const oembedUrl = "https://www.reddit.com/oembed?url=" + encodeURIComponent(u.toString()) + "&format=json";
-      const response = await fetch(oembedUrl, {
+      const oembed = "https://www.reddit.com/oembed?url=" + encodeURIComponent(u.toString()) + "&format=json";
+      const response = await fetchWithTimeout(oembed, {
         headers: {
           accept: "application/json",
           "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
-        },
-        signal: oembedController.signal,
-        cache: "no-store"
-      });
+        }
+      }, REDDIT_RESOLVE_TIMEOUT);
       if (response.ok) {
         const data = await response.json();
         const html = typeof data?.html === "string" ? data.html : "";
-        const embedMarker = 'data-embed-url="';
-        const start = html.indexOf(embedMarker);
+        const marker = 'data-embed-url="';
+        const start = html.indexOf(marker);
         if (start >= 0) {
-          const valueStart = start + embedMarker.length;
-          const valueEnd = html.indexOf('"', valueStart);
-          if (valueEnd > valueStart) {
-            const candidate = html.slice(valueStart, valueEnd).replace(/&amp;/g, "&");
+          const end = html.indexOf('"', start + marker.length);
+          if (end > start) {
+            const candidate = html.slice(start + marker.length, end).replace(/&amp;/g, "&");
             if (candidate.includes("/comments/")) return candidate;
           }
         }
-        const redditUrlStart = html.indexOf("https://www.reddit.com/r/");
-        if (redditUrlStart >= 0) {
-          const tail = html.slice(redditUrlStart);
-          const endCandidates = [tail.indexOf("\\\""), tail.indexOf("'"), tail.indexOf(" "), tail.indexOf(">")].filter((n) => n > 0);
-          const end = endCandidates.length ? Math.min(...endCandidates) : tail.length;
-          const candidate = tail.slice(0, end).replace(/&amp;/g, "&");
-          if (candidate.includes("/comments/")) return candidate;
-        }
       }
-    } catch {
-      // Continue to Jina/direct HTML resolution.
-    } finally {
-      clearTimeout(oembedTimer);
-    }
+    } catch {}
 
-    // Alternate resolver: use a reader proxy when Reddit blocks hosted-server requests.
-    // String-based extraction avoids fragile URL-regex build failures.
-    const proxyController = new AbortController();
-    const proxyTimer = setTimeout(() => proxyController.abort(), REDDIT_RESOLVE_TIMEOUT);
     try {
-      const proxyUrl = "https://r.jina.ai/http://" + u.hostname + u.pathname + u.search;
-      const proxyResponse = await fetch(proxyUrl, {
-        headers: { "accept": "text/plain", "user-agent": "Vidzora/1.0" },
-        signal: proxyController.signal,
-        cache: "no-store"
-      });
-      if (proxyResponse.ok) {
-        const text = await proxyResponse.text();
+      const proxy = "https://r.jina.ai/http://" + u.hostname + u.pathname + u.search;
+      const response = await fetchWithTimeout(proxy, {
+        headers: { accept: "text/plain", "user-agent": "Vidzora/1.0" }
+      }, REDDIT_RESOLVE_TIMEOUT);
+      if (response.ok) {
+        const text = await response.text();
         const marker = "https://www.reddit.com/r/";
         const start = text.indexOf(marker);
         if (start >= 0) {
           const tail = text.slice(start);
-          const ends = [tail.indexOf("\\n"), tail.indexOf(" "), tail.indexOf(")"), tail.indexOf("\\\"")].filter((n) => n > 0);
+          const ends = [tail.indexOf("\n"), tail.indexOf(" "), tail.indexOf(")"), tail.indexOf('"')].filter((n) => n > 0);
           const end = ends.length ? Math.min(...ends) : tail.length;
           const candidate = tail.slice(0, end).replace(/[.,;]+$/, "");
           if (candidate.includes("/comments/")) return candidate;
         }
       }
-    } catch {
-      // Continue to direct HTML resolution.
-    } finally {
-      clearTimeout(proxyTimer);
-    }
+    } catch {}
+  } catch {}
 
-    const fallbackController = new AbortController();
-    const fallbackTimer = setTimeout(() => fallbackController.abort(), REDDIT_RESOLVE_TIMEOUT);
-    try {
-      const response = await fetch(u.toString(), {
-        method: "GET",
-        headers: {
-          accept: "text/html,application/xhtml+xml",
-          "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
-        },
-        redirect: "follow",
-        signal: fallbackController.signal,
-        cache: "no-store"
-      });
-
-      if (response.url && /\/comments\//.test(new URL(response.url).pathname)) {
-        return response.url;
-      }
-
-      const html = await response.text();
-      const canonical =
-        html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)?.[1] ||
-        html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
-        html.match(/<meta[^>]+name=["']twitter:url["'][^>]+content=["']([^"']+)["']/i)?.[1];
-
-      if (canonical) {
-        try {
-          const resolved = new URL(canonical, u.origin);
-          if (
-            (resolved.hostname === "www.reddit.com" ||
-              resolved.hostname === "reddit.com" ||
-              resolved.hostname === "old.reddit.com") &&
-            /^\/r\/[^/]+\/comments\//.test(resolved.pathname)
-          ) {
-            return resolved.toString();
-          }
-        } catch {
-          // Keep trying with the original share URL.
-        }
-      }
-    } finally {
-      clearTimeout(fallbackTimer);
-    }
-  } catch {
-    // Keep the original URL so the normal provider flow can still try it.
-  }
   return raw;
 }
 
 function normalizeSourceUrl(raw: string) {
   const u = new URL(raw.trim());
   if (u.protocol === "http:") u.protocol = "https:";
-
   const host = u.hostname.toLowerCase();
 
-  // Normalize YouTube Shorts and short links to a canonical watch URL.
-  // This keeps the original query parameters out of the media-engine URL
-  // while preserving the actual YouTube video ID.
-  if (host === "youtube.com" || host === "www.youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
-    const shortsMatch = u.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{6,})/);
-    if (shortsMatch?.[1]) {
-      return `https://www.youtube.com/watch?v=${shortsMatch[1]}`;
-    }
-
-    const embedMatch = u.pathname.match(/^\/embed\/([A-Za-z0-9_-]{6,})/);
-    if (embedMatch?.[1]) {
-      return `https://www.youtube.com/watch?v=${embedMatch[1]}`;
-    }
-
-    const videoId = u.searchParams.get("v");
-    if (videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)) {
-      return `https://www.youtube.com/watch?v=${videoId}`;
-    }
+  if (["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com"].includes(host)) {
+    const shorts = u.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{6,})/);
+    if (shorts?.[1]) return `https://www.youtube.com/watch?v=${shorts[1]}`;
+    const embed = u.pathname.match(/^\/embed\/([A-Za-z0-9_-]{6,})/);
+    if (embed?.[1]) return `https://www.youtube.com/watch?v=${embed[1]}`;
+    const id = u.searchParams.get("v");
+    if (id && /^[A-Za-z0-9_-]{6,}$/.test(id)) return `https://www.youtube.com/watch?v=${id}`;
   }
 
   if (host === "youtu.be") {
-    const videoId = u.pathname.split("/").filter(Boolean)[0];
-    if (videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)) {
-      return `https://www.youtube.com/watch?v=${videoId}`;
-    }
+    const id = u.pathname.split("/").filter(Boolean)[0];
+    if (id && /^[A-Za-z0-9_-]{6,}$/.test(id)) return `https://www.youtube.com/watch?v=${id}`;
   }
 
   return u.toString();
@@ -270,7 +165,6 @@ function normalizeSourceUrl(raw: string) {
 function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
   const formats: Array<{ label: string; url: string }> = [];
   const seen = new Set<string>();
-
   const add = (label: string, url: unknown) => {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url) || seen.has(url)) return;
     seen.add(url);
@@ -302,46 +196,31 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
 }
 
 async function callProvider(raw: string, base: string, apiKey?: string, mode: "video" | "audio" = "video") {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const response = await fetchWithTimeout(base, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      ...(apiKey ? { Authorization: "Api-Key " + apiKey } : {})
+    },
+    body: JSON.stringify({
+      url: raw,
+      videoQuality: "max",
+      alwaysProxy: false,
+      disableMetadata: false,
+      audioFormat: "mp3",
+      downloadMode: mode === "audio" ? "audio" : "auto",
+      filenameStyle: "basic"
+    })
+  }, REQUEST_TIMEOUT);
 
-  try {
-    const endpoint = new URL(base);
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
-        ...(apiKey ? { Authorization: "Api-Key " + apiKey } : {})
-      },
-      body: JSON.stringify({
-        url: raw,
-        videoQuality: "max",
-        alwaysProxy: false,
-        disableMetadata: false,
-        audioFormat: "mp3",
-        downloadMode: mode === "audio" ? "audio" : "auto",
-        filenameStyle: "basic"
-      }),
-      signal: controller.signal,
-      cache: "no-store"
-    });
+  if (!response.ok) throw new Error("Download provider request failed.");
+  const data = await response.json();
+  if (data?.status === "error") throw new Error(data?.error?.code || "Provider could not process this link.");
+  const formats = normalizeFormats(data, mode);
+  if (!formats.length) throw new Error("No downloadable format was returned.");
 
-    if (!response.ok) throw new Error("Download provider request failed.");
-    const data = await response.json();
-    if (data?.status === "error") throw new Error(data?.error?.code || "Provider could not process this link.");
-
-    const formats = normalizeFormats(data, mode);
-    if (!formats.length) throw new Error("No downloadable format was returned.");
-
-    return {
-      formats,
-      title: data?.filename || data?.title || "Ready to download",
-      thumbnail: data?.thumbnail
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  return { formats, title: data?.filename || data?.title || "Ready to download", thumbnail: data?.thumbnail };
 }
 
 async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "video") {
@@ -349,21 +228,14 @@ async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "
   const videoId = match?.[1];
   if (!videoId) throw new Error("YouTube video ID could not be extracted.");
 
-  const instances = [
-    process.env.PIPED_API_URL?.trim(),
-    "https://pipedapi.kavin.rocks",
-    "https://pipedapi.leptons.xyz"
-  ].filter((value): value is string => Boolean(value));
+  const instances = [process.env.PIPED_API_URL?.trim(), "https://pipedapi.kavin.rocks", "https://pipedapi.leptons.xyz"]
+    .filter((value): value is string => Boolean(value));
 
   for (const base of [...new Set(instances)]) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
     try {
-      const response = await fetch(base.replace(/\/$/, "") + "/streams/" + encodeURIComponent(videoId), {
-        headers: { "accept": "application/json", "user-agent": "Vidzora/1.0" },
-        signal: controller.signal,
-        cache: "no-store"
-      });
+      const response = await fetchWithTimeout(base.replace(/\/$/, "") + "/streams/" + encodeURIComponent(videoId), {
+        headers: { accept: "application/json", "user-agent": "Vidzora/1.0" }
+      }, REQUEST_TIMEOUT);
       if (!response.ok) continue;
       const data = await response.json();
 
@@ -371,13 +243,7 @@ async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "
         const audio = Array.isArray(data?.audioStreams)
           ? data.audioStreams.find((s: any) => s?.url && /^https?:\/\//i.test(s.url))
           : null;
-        if (audio?.url) {
-          return {
-            formats: [{ label: "Audio • MP3", url: audio.url }],
-            title: data?.title || "YouTube audio",
-            thumbnail: data?.thumbnailUrl
-          };
-        }
+        if (audio?.url) return { formats: [{ label: "Audio • MP3", url: audio.url }], title: data?.title || "YouTube audio", thumbnail: data?.thumbnailUrl };
       } else {
         const streams = Array.isArray(data?.videoStreams) ? data.videoStreams : [];
         const playable = streams
@@ -385,18 +251,13 @@ async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "
           .sort((a: any, b: any) => (Number(b?.height) || 0) - (Number(a?.height) || 0));
         if (playable.length) {
           return {
-            formats: playable.slice(0, 5).map((s: any) => ({
-              label: "Video • " + (s.quality || ((s.height || 0) + "p")),
-              url: s.url
-            })),
+            formats: playable.slice(0, 5).map((s: any) => ({ label: "Video • " + (s.quality || ((s.height || 0) + "p")), url: s.url })),
             title: data?.title || "YouTube video",
             thumbnail: data?.thumbnailUrl
           };
         }
       }
-    } finally {
-      clearTimeout(timer);
-    }
+    } catch {}
   }
 
   throw new Error("Piped YouTube fallback did not return a playable stream.");
@@ -406,61 +267,82 @@ async function callRedditFallback(raw: string) {
   if (raw.includes("/s/")) throw new Error("REDDIT_SHARE_UNRESOLVED");
 
   const u = new URL(raw);
-  const commentsMatch = u.pathname.match(/\/comments\/([A-Za-z0-9]+)(?:\/[^/]*)?/);
-  if (!commentsMatch?.[1]) throw new Error("REDDIT_POST_ID_MISSING");
+  const match = u.pathname.match(/\/comments\/([A-Za-z0-9]+)/);
+  if (!match?.[1]) throw new Error("REDDIT_POST_ID_MISSING");
 
+  const postId = match[1];
   const basePath = u.pathname.endsWith("/") ? u.pathname.slice(0, -1) : u.pathname;
+
+  // Prefer the canonical short JSON endpoint first. It avoids failures caused
+  // by long /r/subreddit/comments/title/id paths and works for public posts.
   const candidates = [
-    "https://www.reddit.com" + basePath + ".json?raw_json=1",
-    "https://old.reddit.com" + basePath + ".json?raw_json=1",
-    "https://api.reddit.com" + basePath + ".json?raw_json=1"
+    `https://www.reddit.com/comments/${postId}.json?raw_json=1`,
+    `https://www.reddit.com/comments/${postId}.json`,
+    `https://old.reddit.com/comments/${postId}.json?raw_json=1`,
+    `https://www.reddit.com${basePath}.json?raw_json=1`,
+    `https://old.reddit.com${basePath}.json?raw_json=1`,
+    `https://api.reddit.com/comments/${postId}.json?raw_json=1`
   ];
 
-  const jinaCandidates = candidates.map((endpoint) =>
+  const jinaCandidates = candidates.slice(0, 3).map((endpoint) =>
     "https://r.jina.ai/http://" + endpoint.replace(/^https?:\/\//, "")
   );
 
-  const allCandidates = [...candidates, ...jinaCandidates];
   let post: any = null;
   let lastStatus = 0;
 
-  // Resilient-provider rule: every upstream attempt gets its own timeout.
-  // A timed-out provider must never poison the next provider's AbortSignal.
-  for (const endpoint of allCandidates) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 7000);
+  for (const endpoint of [...candidates, ...jinaCandidates]) {
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetchWithTimeout(endpoint, {
         headers: {
-          accept: "application/json",
+          accept: "application/json,text/plain;q=0.9,*/*;q=0.8",
           "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
-        },
-        signal: controller.signal,
-        cache: "no-store"
-      });
+        }
+      }, REDDIT_PROVIDER_TIMEOUT);
+
       lastStatus = response.status;
       if (!response.ok) continue;
 
-      const data = await response.json();
-      const candidate = data?.[0]?.data?.children?.[0]?.data;
-      if (candidate) {
+      const contentType = response.headers.get("content-type") || "";
+      const body = await response.text();
+      let data: any;
+
+      try {
+        data = JSON.parse(body);
+      } catch {
+        // Jina can return the Reddit JSON as text/markdown. Try to recover a
+        // JSON object from that response instead of assuming application/json.
+        const first = body.indexOf("[");
+        const last = body.lastIndexOf("]");
+        if (first >= 0 && last > first) {
+          try { data = JSON.parse(body.slice(first, last + 1)); } catch {}
+        }
+      }
+
+      const candidate =
+        data?.[0]?.data?.children?.[0]?.data ||
+        data?.data?.children?.[0]?.data ||
+        data?.post ||
+        data;
+
+      if (candidate && (candidate.id || candidate.name || candidate.title)) {
         post = candidate;
         break;
       }
-    } catch {
-      // Try the next isolated provider.
-    } finally {
-      clearTimeout(timer);
-    }
+
+      if (contentType.includes("text/html")) {
+        const mediaMatch = body.match(/https:\/\/v\.redd\.it\/[^"\\\s]+(?:\.mp4[^"\\\s]*)?/);
+        if (mediaMatch?.[0]) {
+          post = { title: "Reddit video", secure_media: { reddit_video: { fallback_url: mediaMatch[0] } } };
+          break;
+        }
+      }
+    } catch {}
   }
 
   if (!post) throw new Error("REDDIT_POST_FETCH_FAILED_" + lastStatus);
 
-  const posts = [
-    post,
-    ...(Array.isArray(post?.crosspost_parent_list) ? post.crosspost_parent_list : [])
-  ];
-
+  const posts = [post, ...(Array.isArray(post?.crosspost_parent_list) ? post.crosspost_parent_list : [])];
   const formats: Array<{ label: string; url: string }> = [];
   const seen = new Set<string>();
 
@@ -473,19 +355,15 @@ async function callRedditFallback(raw: string) {
   };
 
   for (const item of posts) {
-    const media = item?.secure_media?.reddit_video || item?.media?.reddit_video;
-    add("Video • Direct MP4", media?.fallback_url);
-    add("Video • DASH", media?.dash_url);
-    add("Video • HLS", media?.hls_url);
+    const media = item?.secure_media?.reddit_video || item?.media?.reddit_video || item?.media?.redditVideo;
+    add("Video • Direct MP4", media?.fallback_url || media?.fallbackUrl);
+    add("Video • DASH", media?.dash_url || media?.dashUrl);
+    add("Video • HLS", media?.hls_url || media?.hlsUrl);
 
-    if (Array.isArray(media?.mediaUrls)) {
-      for (const url of media.mediaUrls) add("Video • Media", url);
-    }
+    const mediaUrls = media?.mediaUrls || item?.mediaUrls;
+    if (Array.isArray(mediaUrls)) for (const url of mediaUrls) add("Video • Media", url);
 
-    const metadata = item?.media_metadata && typeof item.media_metadata === "object"
-      ? Object.values(item.media_metadata)
-      : [];
-
+    const metadata = item?.media_metadata && typeof item.media_metadata === "object" ? Object.values(item.media_metadata) : [];
     for (const entry of metadata as any[]) {
       const source = entry?.s || entry?.source || entry?.o || {};
       add("Media", source?.mp4);
@@ -493,49 +371,43 @@ async function callRedditFallback(raw: string) {
       add("Media", source?.gif);
     }
 
-    if (Array.isArray(item?.mediaUrls)) {
-      for (const url of item.mediaUrls) add("Media", url);
-    }
-
-    add("Media • Destination", item?.url_overridden_by_dest);
+    add("Media • Destination", item?.url_overridden_by_dest || item?.url);
   }
 
-  if (!formats.length) throw new Error("REDDIT_NO_DIRECT_MEDIA");
+  // /api/file can stream direct media URLs. Do not present DASH/HLS playlists
+  // as if they were MP4 downloads; keep only browser-downloadable media here.
+  const directFormats = formats.filter((format) => {
+    const lower = format.url.toLowerCase();
+    return /\.(mp4|webm|mov|gif)(?:[?#]|$)/.test(lower) || lower.includes("v.redd.it/");
+  });
+
+  if (!directFormats.length) throw new Error("REDDIT_NO_DIRECT_MEDIA");
 
   return {
-    formats,
+    formats: directFormats,
     title: post?.title || "Reddit media",
     thumbnail: post?.thumbnail && /^https?:\/\//i.test(post.thumbnail) ? post.thumbnail : undefined
   };
 }
 
 async function callTikTokFallback(raw: string) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const response = await fetchWithTimeout("https://www.tikwm.com/api/?url=" + encodeURIComponent(raw), {
+    headers: { "user-agent": "Vidzora/1.0" }
+  }, REQUEST_TIMEOUT);
 
-  try {
-    const response = await fetch("https://www.tikwm.com/api/?url=" + encodeURIComponent(raw), {
-      headers: { "user-agent": "Vidzora/1.0" },
-      signal: controller.signal,
-      cache: "no-store"
-    });
+  if (!response.ok) throw new Error("TikTok provider request failed.");
+  const data = await response.json();
+  if (data?.code !== 0 || !data?.data) throw new Error("TikTok video is unavailable.");
 
-    if (!response.ok) throw new Error("TikTok provider request failed.");
-    const data = await response.json();
-    if (data?.code !== 0 || !data?.data) throw new Error("TikTok video is unavailable.");
+  const formats = [
+    data.data.hdplay ? { label: "Video • HD", url: data.data.hdplay } : null,
+    data.data.play ? { label: "Video • No watermark", url: data.data.play } : null,
+    data.data.wmplay ? { label: "Video • Watermark", url: data.data.wmplay } : null,
+    data.data.music ? { label: "Audio", url: data.data.music } : null
+  ].filter(Boolean) as Array<{ label: string; url: string }>;
 
-    const formats = [
-      data.data.hdplay ? { label: "Video • HD", url: data.data.hdplay } : null,
-      data.data.play ? { label: "Video • No watermark", url: data.data.play } : null,
-      data.data.wmplay ? { label: "Video • Watermark", url: data.data.wmplay } : null,
-      data.data.music ? { label: "Audio", url: data.data.music } : null
-    ].filter(Boolean) as Array<{ label: string; url: string }>;
-
-    if (!formats.length) throw new Error("No downloadable format was returned.");
-    return { formats, title: data.data.title || "TikTok video", thumbnail: data.data.cover };
-  } finally {
-    clearTimeout(timer);
-  }
+  if (!formats.length) throw new Error("No downloadable format was returned.");
+  return { formats, title: data.data.title || "TikTok video", thumbnail: data.data.cover };
 }
 
 export async function POST(req: Request) {
@@ -555,8 +427,7 @@ export async function POST(req: Request) {
 
     let raw: string;
     try {
-      raw = await resolveRedditShareUrl(input);
-      raw = normalizeSourceUrl(raw);
+      raw = normalizeSourceUrl(await resolveRedditShareUrl(input));
     } catch {
       return NextResponse.json({ success: false, error: "Please enter a valid public media URL." }, { status: 400 });
     }
@@ -579,13 +450,9 @@ export async function POST(req: Request) {
       if (provider.base && !providers.some((p) => p.base === provider.base)) providers.push(provider);
     }
 
-    type ProviderResult = Awaited<ReturnType<typeof callProvider>>;
-    let result: ProviderResult | null = null;
+    let result: Awaited<ReturnType<typeof callProvider>> | null = null;
     let lastProviderError = "";
 
-    // Provider cascade: use a platform-native path first where it is stronger,
-    // then fall back to the generic media engine. This avoids one broken provider
-    // becoming a single point of failure.
     if (!result && platform === "Reddit" && mode === "video") {
       try {
         result = await callRedditFallback(raw);
@@ -633,9 +500,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         platform,
-        error: lastProviderError
-          ? platform + " provider is temporarily unavailable. Please try again with another public link."
-          : platform + " was detected, but no media format was returned."
+        error: platform + " provider is temporarily unavailable. Please try again with another public link."
       }, { status: 503 });
     }
 
