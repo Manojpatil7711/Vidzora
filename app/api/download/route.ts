@@ -408,8 +408,6 @@ async function callRedditFallback(raw: string) {
   const commentsMatch = u.pathname.match(/\/comments\/([A-Za-z0-9]+)(?:\/[^/]*)?/);
   if (!commentsMatch?.[1]) throw new Error("Reddit post ID could not be extracted.");
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
     const basePath = u.pathname.endsWith("/") ? u.pathname.slice(0, -1) : u.pathname;
     const directApiCandidates = [
@@ -431,6 +429,8 @@ async function callRedditFallback(raw: string) {
     let lastStatus = 0;
 
     for (const endpoint of apiCandidates) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
       try {
         const response = await fetch(endpoint, {
           headers: {
@@ -448,6 +448,8 @@ async function callRedditFallback(raw: string) {
         if (post) break;
       } catch {
         // Try the next Reddit API endpoint.
+      } finally {
+        clearTimeout(timer);
       }
     }
 
@@ -499,8 +501,6 @@ async function callRedditFallback(raw: string) {
       title: post?.title || "Reddit media",
       thumbnail: post?.thumbnail && /^https?:\/\//i.test(post.thumbnail) ? post.thumbnail : undefined
     };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
