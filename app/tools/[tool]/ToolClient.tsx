@@ -33,6 +33,37 @@ function dl(b: Blob, n: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
 }
 
+function waitForSponsorReturn(adWindow: Window | null, maxWait = 15000) {
+  return new Promise<void>((resolve) => {
+    const started = Date.now();
+    let finished = false;
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      resolve();
+    };
+
+    const onFocus = () => {
+      if (Date.now() - started >= 1200) finish();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && Date.now() - started >= 1200) finish();
+    };
+
+    const timer = window.setInterval(() => {
+      if (adWindow?.closed || Date.now() - started >= maxWait) finish();
+    }, 250);
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+  });
+}
+
 function read(f: File) {
   return new Promise<HTMLImageElement>((ok, no) => {
     const i = new Image();
@@ -133,13 +164,15 @@ export default function ToolClient({ tool }: { tool: K }) {
   const [q, setQ] = useState(75);
   const [fmt, setFmt] = useState("image/jpeg");
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 800, h: 600 });
-  const [showSponsor, setShowSponsor] = useState(false);
   const [sponsorIndex, setSponsorIndex] = useState(0);
 
-  async function run() {
+  async function run(adWindow: Window | null = null) {
     if (!files.length) return setMsg("Choose a file first.");
     setBusy(true);
     setMsg("");
+
+    const outputs: { blob: Blob; name: string }[] = [];
+
     try {
       if (tool === "image-compressor") {
         const i = await read(files[0]), x = document.createElement("canvas");
@@ -147,37 +180,40 @@ export default function ToolClient({ tool }: { tool: K }) {
         x.getContext("2d")!.drawImage(i, 0, 0);
         const t = files[0].type === "image/png" ? "image/webp" : files[0].type;
         const b = await blob(x, t, q / 100);
-        dl(b, "vidzora-compressed." + t.split("/")[1].replace("jpeg", "jpg"));
+        outputs.push({ blob: b, name: "vidzora-compressed." + t.split("/")[1].replace("jpeg", "jpg") });
       } else if (tool === "image-resizer") {
         const i = await read(files[0]), x = document.createElement("canvas");
         x.width = Math.max(1, w); x.height = Math.max(1, h);
         x.getContext("2d")!.drawImage(i, 0, 0, x.width, x.height);
-        dl(await blob(x, files[0].type === "image/png" ? "image/png" : "image/jpeg", .9),
-          "vidzora-resized." + (files[0].type === "image/png" ? "png" : "jpg"));
+        outputs.push({
+          blob: await blob(x, files[0].type === "image/png" ? "image/png" : "image/jpeg", .9),
+          name: "vidzora-resized." + (files[0].type === "image/png" ? "png" : "jpg")
+        });
       } else if (tool === "jpg-to-pdf") {
-        dl(await imagesToPdf(files), "vidzora-images.pdf");
+        outputs.push({ blob: await imagesToPdf(files), name: "vidzora-images.pdf" });
       } else if (tool === "merge-pdf") {
-        dl(await mergePdfs(files), "vidzora-merged.pdf");
+        outputs.push({ blob: await mergePdfs(files), name: "vidzora-merged.pdf" });
       } else if (tool === "pdf-to-jpg") {
         const pages = await renderPdf(files[0], (n) => setMsg("Rendering page " + n + "…"));
-        pages.forEach((p) => dl(p.blob, "vidzora-page-" + p.page + ".jpg"));
-        setMsg(pages.length + " JPG file(s) ready.");
+        pages.forEach((p) => outputs.push({ blob: p.blob, name: "vidzora-page-" + p.page + ".jpg" }));
       } else if (tool === "compress-pdf") {
         const pages = await renderPdf(files[0], (n) => setMsg("Compressing page " + n + "…"));
         const jpgFiles = pages.map((p, i) => new File([p.blob], "page-" + (i + 1) + ".jpg", { type: "image/jpeg" }));
         const out = await imagesToPdf(jpgFiles);
         if (out.size >= files[0].size) {
-          dl(files[0], "vidzora-original.pdf");
+          outputs.push({ blob: files[0], name: "vidzora-original.pdf" });
           setMsg("Rebuild did not reduce the size, so the original PDF was kept.");
         } else {
-          dl(out, "vidzora-compressed.pdf");
-          setMsg("Compressed PDF ready.");
+          outputs.push({ blob: out, name: "vidzora-compressed.pdf" });
         }
       } else if (tool === "image-converter") {
         const i = await read(files[0]), x = document.createElement("canvas");
         x.width = i.naturalWidth; x.height = i.naturalHeight;
         x.getContext("2d")!.drawImage(i, 0, 0);
-        dl(await blob(x, fmt, .92), "vidzora-converted." + fmt.split("/")[1].replace("jpeg", "jpg"));
+        outputs.push({
+          blob: await blob(x, fmt, .92),
+          name: "vidzora-converted." + fmt.split("/")[1].replace("jpeg", "jpg")
+        });
       } else if (tool === "image-cropper") {
         const i = await read(files[0]);
         const x = Math.max(0, Math.min(crop.x, i.naturalWidth - 1));
@@ -187,14 +223,44 @@ export default function ToolClient({ tool }: { tool: K }) {
         const z = document.createElement("canvas");
         z.width = ww; z.height = hh;
         z.getContext("2d")!.drawImage(i, x, y, ww, hh, 0, 0, ww, hh);
-        dl(await blob(z, "image/png"), "vidzora-crop.png");
+        outputs.push({ blob: await blob(z, "image/png"), name: "vidzora-crop.png" });
       }
-      if (tool.startsWith("image-")) setMsg("Done — your file is ready.");
+
+      if (outputs.length) {
+        if (adWindow) {
+          await waitForSponsorReturn(adWindow);
+        } else {
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 1200));
+        }
+        outputs.forEach((item) => dl(item.blob, item.name));
+        if (!msg) setMsg("Done — your file is ready.");
+      }
     } catch (e: any) {
       setMsg(e?.message || "Could not process this file.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function startGenerate() {
+    if (busy) return;
+    if (!files.length) {
+      setMsg("Choose a file first.");
+      return;
+    }
+
+    const next = (sponsorIndex + 1) % toolSponsorLinks.length;
+    setSponsorIndex(next);
+
+    // Monetag SmartLink opens immediately from the user's Generate click.
+    let adWindow: Window | null = null;
+    try {
+      adWindow = window.open(toolSponsorLinks[next], "_blank", "noopener,noreferrer");
+    } catch {
+      adWindow = null;
+    }
+
+    void run(adWindow);
   }
 
   return <main className="toolShell">
@@ -231,11 +297,11 @@ export default function ToolClient({ tool }: { tool: K }) {
           <label>Width<input type="number" value={crop.w} onChange={e => setCrop({ ...crop, w: +e.target.value })} /></label>
           <label>Height<input type="number" value={crop.h} onChange={e => setCrop({ ...crop, h: +e.target.value })} /></label>
         </div>}
-        <button className="toolRun" disabled={busy} onClick={() => { setSponsorIndex(i => (i + 1) % toolSponsorLinks.length); setShowSponsor(true); }}>{busy ? "Processing…" : "Generate"}</button>
+        <button className="toolRun" disabled={busy} onClick={startGenerate}>{busy ? "Preparing file…" : "Generate"}</button>
         {msg && <div className="toolMessage">{msg}</div>}
       </div>
       <div className="toolTrust"><b>✓ Simple</b><b>✓ Mobile friendly</b><b>✓ No account</b></div>
-      {showSponsor && <div className="sponsorModal" role="dialog" aria-modal="true" aria-label="Sponsored offer"><div className="sponsorModalCard"><div className="sponsorBannerLabel">ADVERTISEMENT</div><h3>Support Vidzora</h3><p>Vidzora is free to use. You may view this sponsored offer, or continue directly to generate your file.</p><a href={toolSponsorLinks[sponsorIndex]} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">View sponsor ↗</a><div className="sponsorModalActions"><button type="button" className="sponsorModalContinue" onClick={() => { setShowSponsor(false); void run(); }}>Generate file</button><button type="button" className="sponsorModalClose" onClick={() => setShowSponsor(false)}>Cancel</button></div></div></div>}
+
     </section>
   </main>;
 }
