@@ -49,6 +49,33 @@ async function resolveRedditShareUrl(raw: string) {
 
     if (!isRedditShare) return raw;
 
+    // First try the real redirect. Reddit /s/ links are redirect wrappers;
+    // the redirect target is the canonical /comments/... post URL.
+    const redirectController = new AbortController();
+    const redirectTimer = setTimeout(() => redirectController.abort(), 8000);
+    try {
+      const response = await fetch(u.toString(), {
+        method: "GET",
+        headers: {
+          accept: "text/html,application/xhtml+xml",
+          "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
+        },
+        redirect: "follow",
+        signal: redirectController.signal,
+        cache: "no-store"
+      });
+      if (response.url) {
+        const resolved = new URL(response.url);
+        if (/\/r\/[^/]+\/comments\//.test(resolved.pathname)) {
+          return resolved.toString();
+        }
+      }
+    } catch {
+      // Continue with Reddit JSON/oEmbed/proxy resolution.
+    } finally {
+      clearTimeout(redirectTimer);
+    }
+
     // Reddit share URLs can expose the canonical post through their JSON
     // representation even when the normal HTML request stays on /s/.
     const controller = new AbortController();
@@ -385,11 +412,20 @@ async function callRedditFallback(raw: string) {
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
     const basePath = u.pathname.endsWith("/") ? u.pathname.slice(0, -1) : u.pathname;
-    const apiCandidates = [
+    const directApiCandidates = [
       "https://www.reddit.com" + basePath + ".json?raw_json=1",
       "https://old.reddit.com" + basePath + ".json?raw_json=1",
       "https://api.reddit.com" + basePath + ".json?raw_json=1"
     ];
+
+    // Hosted/serverless IPs can receive Reddit 403/429 responses. Jina is used
+    // only as a read-through fallback for the same public Reddit JSON endpoint;
+    // it does not become the primary media provider.
+    const jinaApiCandidates = directApiCandidates.map((endpoint) =>
+      "https://r.jina.ai/http://" + endpoint.replace(/^https?:\/\//, "")
+    );
+
+    const apiCandidates = [...directApiCandidates, ...jinaApiCandidates];
 
     let post: any = null;
     let lastStatus = 0;
@@ -418,7 +454,12 @@ async function callRedditFallback(raw: string) {
     if (!post) {
       throw new Error("Reddit post API unavailable (" + lastStatus + ").");
     }
-    const media = post?.secure_media?.reddit_video || post?.media?.reddit_video;
+    const media =
+      post?.secure_media?.reddit_video ||
+      post?.media?.reddit_video ||
+      post?.crosspost_parent_list?.[0]?.secure_media?.reddit_video ||
+      post?.crosspost_parent_list?.[0]?.media?.reddit_video;
+
     const formats: Array<{ label: string; url: string }> = [];
 
     if (typeof media?.fallback_url === "string" && /^https?:\/\//i.test(media.fallback_url)) {
