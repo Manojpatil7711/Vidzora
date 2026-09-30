@@ -49,8 +49,43 @@ async function resolveRedditShareUrl(raw: string) {
 
     if (!isRedditShare) return raw;
 
+    // Reddit share URLs can expose the canonical post through their JSON
+    // representation even when the normal HTML request stays on /s/.
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const jsonUrl = new URL(u.toString());
+      jsonUrl.pathname = jsonUrl.pathname.replace(/\/$/, "") + ".json";
+      const response = await fetch(jsonUrl.toString(), {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
+        },
+        redirect: "follow",
+        signal: controller.signal,
+        cache: "no-store"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const post = data?.[0]?.data?.children?.[0]?.data;
+        const permalink = typeof post?.permalink === "string" ? post.permalink : "";
+        if (/^\/r\/[^/]+\/comments\//.test(permalink)) {
+          return new URL(permalink, "https://www.reddit.com").toString();
+        }
+        if (response.url && /\/comments\//.test(new URL(response.url).pathname)) {
+          return response.url.replace(/\.json(?:\?.*)?$/, "");
+        }
+      }
+    } catch {
+      // Fall through to the normal redirect/HTML resolver.
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const fallbackController = new AbortController();
+    const fallbackTimer = setTimeout(() => fallbackController.abort(), 8000);
     try {
       const response = await fetch(u.toString(), {
         method: "GET",
@@ -59,13 +94,13 @@ async function resolveRedditShareUrl(raw: string) {
           "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
         },
         redirect: "follow",
-        signal: controller.signal,
+        signal: fallbackController.signal,
         cache: "no-store"
       });
 
-      // Reddit /s/ links are share URLs. Depending on Reddit's response,
-      // the HTTP URL may remain unchanged, so also inspect canonical/og:url.
-      if (response.url && response.url !== u.toString()) return response.url;
+      if (response.url && /\/comments\//.test(new URL(response.url).pathname)) {
+        return response.url;
+      }
 
       const html = await response.text();
       const canonical =
@@ -85,11 +120,11 @@ async function resolveRedditShareUrl(raw: string) {
             return resolved.toString();
           }
         } catch {
-          // Fall through to the original share URL.
+          // Keep trying with the original share URL.
         }
       }
     } finally {
-      clearTimeout(timer);
+      clearTimeout(fallbackTimer);
     }
   } catch {
     // Keep the original URL so the normal provider flow can still try it.
@@ -268,6 +303,72 @@ async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "
   throw new Error("Piped YouTube fallback did not return a playable stream.");
 }
 
+async function callRedditFallback(raw: string) {
+  if (raw.includes("/s/")) throw new Error("Reddit share link could not be resolved.");
+
+  const u = new URL(raw);
+  const commentsMatch = u.pathname.match(/\/comments\/([A-Za-z0-9]+)(?:\/[^/]*)?/);
+  if (!commentsMatch?.[1]) throw new Error("Reddit post ID could not be extracted.");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  try {
+    const jsonUrl = new URL(u.toString());
+    jsonUrl.pathname = jsonUrl.pathname.replace(/\/$/, "") + ".json";
+    jsonUrl.search = "?raw_json=1";
+
+    const response = await fetch(jsonUrl.toString(), {
+      headers: {
+        accept: "application/json",
+        "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
+      },
+      signal: controller.signal,
+      cache: "no-store"
+    });
+    if (!response.ok) throw new Error("Reddit post API request failed.");
+
+    const data = await response.json();
+    const post = data?.[0]?.data?.children?.[0]?.data;
+    if (!post) throw new Error("Reddit post was not found.");
+
+    const media = post?.secure_media?.reddit_video || post?.media?.reddit_video;
+    const formats: Array<{ label: string; url: string }> = [];
+
+    if (typeof media?.fallback_url === "string" && /^https?:\/\//i.test(media.fallback_url)) {
+      formats.push({
+        label: "Video • Direct MP4",
+        url: media.fallback_url
+      });
+    }
+
+    const mediaUrls = Array.isArray(post?.media_metadata)
+      ? []
+      : Array.isArray(post?.mediaUrls)
+        ? post.mediaUrls
+        : [];
+
+    for (const url of mediaUrls) {
+      if (typeof url === "string" && /^https?:\/\//i.test(url)) {
+        formats.push({ label: "Media", url });
+      }
+    }
+
+    if (!formats.length) {
+      const direct = typeof post?.url_overridden_by_dest === "string" ? post.url_overridden_by_dest : "";
+      if (/^https?:\/\//i.test(direct)) formats.push({ label: "Media", url: direct });
+    }
+
+    if (!formats.length) throw new Error("Reddit did not expose a direct media URL.");
+    return {
+      formats,
+      title: post?.title || "Reddit media",
+      thumbnail: post?.thumbnail && /^https?:\/\//i.test(post.thumbnail) ? post.thumbnail : undefined
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function callTikTokFallback(raw: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -356,6 +457,14 @@ export async function POST(req: Request) {
         result = await callPipedYouTubeFallback(raw, mode);
       } catch (error: any) {
         lastProviderError = error?.message || "YouTube fallback provider failed.";
+      }
+    }
+
+    if (!result && platform === "Reddit") {
+      try {
+        result = await callRedditFallback(raw);
+      } catch (error: any) {
+        lastProviderError = error?.message || "Reddit fallback provider failed.";
       }
     }
 
