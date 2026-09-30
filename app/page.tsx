@@ -109,11 +109,11 @@ function DownloadSponsorModal({
       <div className="sponsorModalCard">
         <div className="sponsorBannerLabel">ADVERTISEMENT</div>
         <h3>Quick Download</h3>
-        <p>Please close/cancel the sponsored ad to continue to your selected download.</p>
+        <p>Your download has already started. You can close or go back from the sponsored ad at any time.</p>
         <AdUnit variant="native" />
         <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">Open sponsor ↗</a>
         <div className="sponsorModalActions">
-          <button type="button" className="sponsorModalClose" onClick={onClose}>Cancel ad & Quick Download</button>
+          <button type="button" className="sponsorModalClose" onClick={onClose}>Close ad</button>
         </div>
       </div>
     </div>
@@ -215,6 +215,10 @@ export default function Home() {
     sponsorIndexRef.current = (sponsorIndexRef.current + 1) % sponsorLinks.length;
     const sponsor = sponsorLinks[sponsorIndexRef.current];
     setSponsorHref(sponsor);
+
+    // Download is always independent of the sponsored ad. Opening the ad must
+    // never block, cancel, or delay the user's selected download.
+    window.open("/api/file?url=" + encodeURIComponent(format.url), "_blank", "noopener,noreferrer");
   }
 
   function continueDownload() {
@@ -305,7 +309,7 @@ export default function Home() {
 
           {!activeFormats.length && <div className="notice error">This source did not return a {mediaType.toUpperCase()} format.</div>}
           <AdUnit variant="native" />
-          <p className="microcopy downloadNote">{mediaType === "mp3" && audioLoading ? "Preparing MP3 audio…" : "Select MP4 or MP3, choose the available quality, then download. Sponsored offers rotate between download actions."}</p>
+          <p className="microcopy downloadNote">{mediaType === "mp3" && audioLoading ? "Preparing MP3 audio…" : "Your download starts immediately. A sponsored offer may appear separately and can be closed or ignored."}</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
         </div>}
       </section>
