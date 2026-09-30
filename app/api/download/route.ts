@@ -342,24 +342,40 @@ async function callRedditFallback(raw: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
-    const jsonUrl = new URL(u.toString());
-    jsonUrl.pathname = jsonUrl.pathname.replace(/\/$/, "") + ".json";
-    jsonUrl.search = "?raw_json=1";
+    const basePath = u.pathname.replace(/\\/$/, "");
+    const apiCandidates = [
+      "https://www.reddit.com" + basePath + ".json?raw_json=1",
+      "https://old.reddit.com" + basePath + ".json?raw_json=1",
+      "https://api.reddit.com" + basePath + ".json?raw_json=1"
+    ];
 
-    const response = await fetch(jsonUrl.toString(), {
-      headers: {
-        accept: "application/json",
-        "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
-      },
-      signal: controller.signal,
-      cache: "no-store"
-    });
-    if (!response.ok) throw new Error("Reddit post API request failed.");
+    let post: any = null;
+    let lastStatus = 0;
 
-    const data = await response.json();
-    const post = data?.[0]?.data?.children?.[0]?.data;
-    if (!post) throw new Error("Reddit post was not found.");
+    for (const endpoint of apiCandidates) {
+      try {
+        const response = await fetch(endpoint, {
+          headers: {
+            accept: "application/json",
+            "user-agent": "Mozilla/5.0 (compatible; Vidzora/1.0)"
+          },
+          signal: controller.signal,
+          cache: "no-store"
+        });
+        lastStatus = response.status;
+        if (!response.ok) continue;
 
+        const data = await response.json();
+        post = data?.[0]?.data?.children?.[0]?.data;
+        if (post) break;
+      } catch {
+        // Try the next Reddit API endpoint.
+      }
+    }
+
+    if (!post) {
+      throw new Error("Reddit post API unavailable (" + lastStatus + ").");
+    }
     const media = post?.secure_media?.reddit_video || post?.media?.reddit_video;
     const formats: Array<{ label: string; url: string }> = [];
 
