@@ -209,7 +209,7 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
   return formats;
 }
 
-async function callProvider(raw: string, base: string, apiKey?: string, mode: "video" | "audio" = "video") {
+async function callProvider(raw: string, base: string, apiKey?: string, mode: "video" | "audio" = "video", alwaysProxy = false) {
   const response = await fetchWithTimeout(base, {
     method: "POST",
     headers: {
@@ -220,7 +220,10 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
     body: JSON.stringify({
       url: raw,
       videoQuality: "max",
-      alwaysProxy: false,
+      // Prefer a server-owned Cobalt tunnel for the primary engine. This avoids
+      // exposing short-lived origin URLs to the browser and gives the user a
+      // stable download target for the duration of the tunnel lifespan.
+      alwaysProxy,
       disableMetadata: false,
       audioFormat: "mp3",
       downloadMode: mode === "audio" ? "audio" : "auto",
@@ -479,7 +482,7 @@ export async function POST(req: Request) {
     if (!result) {
       for (const provider of providers) {
         try {
-          result = await callProvider(raw, provider.base, provider.key, mode);
+          result = await callProvider(raw, provider.base, provider.key, mode, provider.base === primaryBase);
           if (result) break;
         } catch (error: any) {
           lastProviderError = error?.message || "Provider failed.";
