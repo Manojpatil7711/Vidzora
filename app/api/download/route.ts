@@ -140,7 +140,7 @@ async function resolveRedditShareUrl(raw: string) {
         for (const candidateRaw of directCandidates) {
           try {
             const candidate = new URL(candidateRaw.replace(/&amp;/g, "&"));
-            if (/\\/comments\\/[A-Za-z0-9]+/.test(candidate.pathname)) {
+            if (candidate.pathname.includes("/comments/")) {
               candidate.search = "";
               candidate.hash = "";
               return candidate.toString();
