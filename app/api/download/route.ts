@@ -117,24 +117,38 @@ async function resolveRedditShareUrl(raw: string) {
       }
     } catch {}
 
-    try {
-      const proxy = "https://r.jina.ai/http://" + u.hostname + u.pathname + u.search;
-      const response = await fetchWithTimeout(proxy, {
-        headers: { accept: "text/plain", "user-agent": "Vidzora/1.0" }
-      }, REDDIT_RESOLVE_TIMEOUT);
-      if (response.ok) {
+    // Reddit share redirects can return a bot-check page to cloud/serverless
+    // IPs instead of exposing the Location header. Use Jina as a last-mile
+    // reader and extract canonical/og:url/comments URLs from its output.
+    for (const proxyHost of ["www.reddit.com", "old.reddit.com"]) {
+      try {
+        const proxy = "https://r.jina.ai/http://" + proxyHost + u.pathname + u.search;
+        const response = await fetchWithTimeout(proxy, {
+          headers: { accept: "text/plain", "user-agent": "Vidzora/1.0" }
+        }, REDDIT_RESOLVE_TIMEOUT);
+        if (!response.ok) continue;
+
         const text = await response.text();
-        const marker = "https://www.reddit.com/r/";
-        const start = text.indexOf(marker);
-        if (start >= 0) {
-          const tail = text.slice(start);
-          const ends = [tail.indexOf("\n"), tail.indexOf(" "), tail.indexOf(")"), tail.indexOf('"')].filter((n) => n > 0);
-          const end = ends.length ? Math.min(...ends) : tail.length;
-          const candidate = tail.slice(0, end).replace(/[.,;]+$/, "");
-          if (candidate.includes("/comments/")) return candidate;
+
+        const directCandidates = [
+          text.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)?.[1],
+          text.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i)?.[1],
+          text.match(/https?:\\/\\/(?:www\\.|old\\.)?reddit\\.com\\/r\\/[^\\s"'<>]+\\/comments\\/[A-Za-z0-9]+[^\\s"'<>]*/i)?.[0],
+          text.match(/https?:\\/\\/(?:www\\.|old\\.)?reddit\\.com\\/comments\\/[A-Za-z0-9]+[^\\s"'<>]*/i)?.[0]
+        ].filter((value): value is string => Boolean(value));
+
+        for (const candidateRaw of directCandidates) {
+          try {
+            const candidate = new URL(candidateRaw.replace(/&amp;/g, "&"));
+            if (/\\/comments\\/[A-Za-z0-9]+/.test(candidate.pathname)) {
+              candidate.search = "";
+              candidate.hash = "";
+              return candidate.toString();
+            }
+          } catch {}
         }
-      }
-    } catch {}
+      } catch {}
+    }
   } catch {}
 
   return raw;
