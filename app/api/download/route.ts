@@ -22,6 +22,8 @@ const PLATFORM_HOSTS = {
 
 const MAX_URL_LENGTH = 4096;
 const REQUEST_TIMEOUT = 15000;
+const YOUTUBE_PROVIDER_TIMEOUT = 6500;
+const PIPED_INSTANCE_TIMEOUT = 4500;
 const REDDIT_RESOLVE_TIMEOUT = 12000;
 const REDDIT_PROVIDER_TIMEOUT = 7000;
 
@@ -209,7 +211,7 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
   return formats;
 }
 
-async function callProvider(raw: string, base: string, apiKey?: string, mode: "video" | "audio" = "video", alwaysProxy = false) {
+async function callProvider(raw: string, base: string, apiKey?: string, mode: "video" | "audio" = "video", alwaysProxy = false, timeoutMs = REQUEST_TIMEOUT) {
   const response = await fetchWithTimeout(base, {
     method: "POST",
     headers: {
@@ -265,7 +267,7 @@ async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "
     try {
       const response = await fetchWithTimeout(base.replace(/\/$/, "") + "/streams/" + encodeURIComponent(videoId), {
         headers: { accept: "application/json", "user-agent": "Vidzora/1.0" }
-      }, REQUEST_TIMEOUT);
+      }, PIPED_INSTANCE_TIMEOUT);
       if (!response.ok) continue;
       const data = await response.json();
 
@@ -493,19 +495,31 @@ export async function POST(req: Request) {
     }
 
     if (!result && platform === "YouTube") {
-      // YouTube is handled by a rotating Piped pool first. This avoids making
-      // the site depend on a single Cobalt/PO-token session for YouTube.
+      // YouTube is latency-sensitive on serverless. Race the self-hosted Cobalt
+      // engine against the rotating Piped pool instead of waiting through a
+      // long sequential chain. The first healthy provider wins.
+      const youtubeAttempts: Promise<Awaited<ReturnType<typeof callProvider>>>[] = [];
+
+      for (const provider of providers) {
+        const attempts = provider.base === primaryBase ? [true, false] : [false];
+        for (const alwaysProxy of attempts) {
+          youtubeAttempts.push(
+            callProvider(raw, provider.base, provider.key, mode, alwaysProxy, YOUTUBE_PROVIDER_TIMEOUT)
+          );
+        }
+      }
+      youtubeAttempts.push(callPipedYouTubeFallback(raw, mode));
+
       try {
-        result = await callPipedYouTubeFallback(raw, mode);
+        result = await Promise.any(youtubeAttempts);
       } catch (error: any) {
-        lastProviderError = error?.message || "YouTube fallback provider failed.";
+        const errors = Array.isArray(error?.errors) ? error.errors : [];
+        lastProviderError = errors.at(-1)?.message || "All YouTube providers failed.";
       }
     }
 
-    if (!result) {
-      // Try the primary engine through its stable tunnel first, then retry the
-      // same engine without tunneling before falling back to another provider.
-      // Some sources reject tunneled preparation even though direct delivery works.
+    if (!result && platform !== "YouTube") {
+      // Non-YouTube platforms keep the existing provider order and behavior.
       for (const provider of providers) {
         const attempts = provider.base === primaryBase ? [true, false] : [false];
         for (const alwaysProxy of attempts) {
