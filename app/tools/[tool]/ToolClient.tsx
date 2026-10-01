@@ -80,6 +80,77 @@ function blob(c: HTMLCanvasElement, t: string, q?: number) {
   );
 }
 
+async function compressToTargetSize(
+  image: HTMLImageElement,
+  targetBytes: number,
+  onProgress?: (message: string) => void
+) {
+  if (!Number.isFinite(targetBytes) || targetBytes < 1024) {
+    throw Error("Target size must be at least 1 KB.");
+  }
+
+  // WebP gives PNG files a practical lossy compression path while keeping
+  // JPEG/WebP inputs in their original family. The search prefers quality
+  // first and only reduces dimensions when the target cannot be reached.
+  const type = "image/webp";
+  const sourceW = image.naturalWidth;
+  const sourceH = image.naturalHeight;
+  let scale = 1;
+
+  for (let pass = 0; pass < 8; pass++) {
+    const width = Math.max(1, Math.round(sourceW * scale));
+    const height = Math.max(1, Math.round(sourceH * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) throw Error("Image processing is not supported on this device.");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(image, 0, 0, width, height);
+
+    // Binary-search quality instead of blindly lowering it. This keeps the
+    // highest possible visual quality for the requested target size.
+    let low = 0.05;
+    let high = 0.95;
+    let best: Blob | null = null;
+
+    for (let i = 0; i < 8; i++) {
+      const quality = (low + high) / 2;
+      const candidate = await blob(canvas, type, quality);
+      onProgress?.("Optimizing quality…");
+      if (candidate.size <= targetBytes) {
+        best = candidate;
+        low = quality;
+      } else {
+        high = quality;
+      }
+    }
+
+    if (best) {
+      return { blob: best, type, width, height };
+    }
+
+    // Target is too small at this resolution even at minimum quality.
+    // Reduce pixels gradually rather than destroying quality in one step.
+    scale *= 0.82;
+    if (width <= 160 || height <= 160) break;
+    onProgress?.("Fine-tuning dimensions…");
+  }
+
+  // A very aggressive target may be below what the browser encoder can
+  // produce. Return the smallest safe result rather than failing silently.
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(sourceW * scale));
+  canvas.height = Math.max(1, Math.round(sourceH * scale));
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const fallback = await blob(canvas, type, 0.05);
+  return { blob: fallback, type, width: canvas.width, height: canvas.height };
+}
+
 async function pdfLib() {
   return import("pdf-lib");
 }
@@ -165,6 +236,8 @@ export default function ToolClient({ tool }: { tool: K }) {
   const [w, setW] = useState("1200");
   const [h, setH] = useState("800");
   const [q, setQ] = useState(75);
+  const [targetSize, setTargetSize] = useState("500");
+  const [targetUnit, setTargetUnit] = useState<"KB" | "MB">("KB");
   const [fmt, setFmt] = useState("image/jpeg");
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 800, h: 600 });
   const [sponsorIndex, setSponsorIndex] = useState(0);
@@ -178,12 +251,19 @@ export default function ToolClient({ tool }: { tool: K }) {
 
     try {
       if (tool === "image-compressor") {
-        const i = await read(files[0]), x = document.createElement("canvas");
-        x.width = i.naturalWidth; x.height = i.naturalHeight;
-        x.getContext("2d")!.drawImage(i, 0, 0);
-        const t = files[0].type === "image/png" ? "image/webp" : files[0].type;
-        const b = await blob(x, t, q / 100);
-        outputs.push({ blob: b, name: "vidzora-compressed." + t.split("/")[1].replace("jpeg", "jpg") });
+        const i = await read(files[0]);
+        const targetValue = Number.parseFloat(targetSize);
+        const targetBytes = targetValue * (targetUnit === "MB" ? 1024 * 1024 : 1024);
+
+        if (!Number.isFinite(targetValue) || targetValue <= 0) {
+          throw Error("Enter a valid target size.");
+        }
+
+        const result = await compressToTargetSize(i, targetBytes, setMsg);
+        outputs.push({
+          blob: result.blob,
+          name: "vidzora-compressed.webp"
+        });
       } else if (tool === "image-resizer") {
         const i = await read(files[0]), x = document.createElement("canvas");
         const width = Math.max(1, Number.parseInt(w, 10) || 1);
@@ -284,9 +364,27 @@ export default function ToolClient({ tool }: { tool: K }) {
           <strong>{files.length ? files.length + " file(s) selected" : "Choose file" + (c.m ? "s" : "")}</strong>
           <span>Tap to browse or select from your device</span>
         </label>
-        {tool === "image-compressor" && <label className="control">Quality
-          <input type="range" min="20" max="95" value={q} onChange={e => setQ(+e.target.value)} /><b>{q}%</b>
-        </label>}
+        {tool === "image-compressor" && <>
+          <div className="controls2">
+            <label>Target size
+              <input
+                type="number"
+                min="1"
+                step="1"
+                inputMode="decimal"
+                value={targetSize}
+                onChange={e => setTargetSize(e.target.value)}
+              />
+            </label>
+            <label>Unit
+              <select value={targetUnit} onChange={e => setTargetUnit(e.target.value as "KB" | "MB")}>
+                <option value="KB">KB</option>
+                <option value="MB">MB</option>
+              </select>
+            </label>
+          </div>
+          <div className="toolMessage">Targets the requested size while preserving the highest practical quality.</div>
+        </>}
         {tool === "image-resizer" && <div className="controls2">
           <label>Width<input type="number" min="1" inputMode="numeric" value={w} onChange={e => setW(e.target.value)} onBlur={() => setW(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
           <label>Height<input type="number" min="1" inputMode="numeric" value={h} onChange={e => setH(e.target.value)} onBlur={() => setH(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
