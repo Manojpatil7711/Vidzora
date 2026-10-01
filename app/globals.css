@@ -59,3 +59,13 @@ footer{max-width:1100px;margin:auto;padding:35px 24px 50px;color:#666;display:fl
 .toolsAd{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(255,255,255,.012);border:1px solid #181818;border-radius:12px;margin:18px auto}.toolsAd>span{position:absolute;top:5px;left:7px;font-size:7px;letter-spacing:.12em;color:#4d4d4d;font-weight:800;pointer-events:none;z-index:1}.toolsAd--leaderboard{width:min(728px,calc(100% - 32px));height:90px}.toolsAd--leaderboard iframe{max-width:100%}.toolsContentFrame{max-width:1300px;margin:auto;display:grid;grid-template-columns:minmax(0,1100px) 160px;gap:24px;align-items:start}.toolsContentFrame .toolsGrid{max-width:1100px;margin:0}.toolsRail{width:160px;padding-top:25px}.toolsAd--rail{width:160px;height:600px;margin:0}.toolsMidAd{display:flex;justify-content:center;padding:10px 24px 30px}.toolsAd--rectangle{width:300px;height:250px;margin:0}.toolsInfo{max-width:1100px}
 @media(max-width:1180px){.toolsContentFrame{grid-template-columns:1fr}.toolsRail{display:none}.toolsContentFrame .toolsGrid{max-width:1100px;width:100%}}
 @media(max-width:700px){.toolsAd--leaderboard{height:50px;width:320px;max-width:calc(100% - 24px);margin:14px auto}.toolsAd--leaderboard iframe{max-width:320px}.toolsMidAd{padding:8px 12px 26px}.toolsAd--rectangle{width:300px;height:250px;max-width:100%}}
+
+/* Premium top navigation: primary actions left, information links anchored right */
+.mainNav{display:flex;align-items:center;justify-content:space-between;gap:28px;flex:1;margin-left:34px}
+.navPrimary,.navInfo{display:flex;align-items:center;gap:10px}
+.navInfo{margin-left:auto;gap:4px}
+.navInfo a{display:inline-flex;align-items:center;gap:5px;padding:9px 11px;border-radius:10px;color:#a4a4a4;font-size:13px;font-weight:700;transition:color .15s ease,background .15s ease,transform .15s ease}
+.navInfo a span{font-size:12px;color:#666;transition:transform .15s ease,color .15s ease}
+.navInfo a:hover{color:#fff;background:#151515;transform:translateY(-1px)}
+.navInfo a:hover span{color:#9cff57;transform:translate(1px,1px)}
+@media(max-width:700px){.mainNav{margin-left:0;width:100%;gap:8px}.navPrimary{gap:7px}.navInfo{margin-left:auto}.navInfo a{padding:7px 8px;font-size:11px}.navInfo a span{display:none}}
