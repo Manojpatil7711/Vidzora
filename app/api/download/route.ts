@@ -247,7 +247,18 @@ async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "
   const videoId = match?.[1];
   if (!videoId) throw new Error("YouTube video ID could not be extracted.");
 
-  const instances = [process.env.PIPED_API_URL?.trim(), "https://pipedapi.kavin.rocks", "https://pipedapi.leptons.xyz"]
+  const instances = [
+    process.env.PIPED_API_URL?.trim(),
+    "https://pipedapi.kavin.rocks",
+    "https://pipedapi.leptons.xyz",
+    "https://pipedapi.syncpundit.io",
+    "https://api-piped.mha.fi",
+    "https://piped-api.garudalinux.org",
+    "https://pipedapi.tokhmi.xyz",
+    "https://pipedapi.moomoo.me",
+    "https://api.piped.yt",
+    "https://pipedapi.adminforge.de"
+  ]
     .filter((value): value is string => Boolean(value));
 
   for (const base of [...new Set(instances)]) {
@@ -481,6 +492,16 @@ export async function POST(req: Request) {
       }
     }
 
+    if (!result && platform === "YouTube") {
+      // YouTube is handled by a rotating Piped pool first. This avoids making
+      // the site depend on a single Cobalt/PO-token session for YouTube.
+      try {
+        result = await callPipedYouTubeFallback(raw, mode);
+      } catch (error: any) {
+        lastProviderError = error?.message || "YouTube fallback provider failed.";
+      }
+    }
+
     if (!result) {
       // Try the primary engine through its stable tunnel first, then retry the
       // same engine without tunneling before falling back to another provider.
@@ -496,14 +517,6 @@ export async function POST(req: Request) {
           }
         }
         if (result) break;
-      }
-    }
-
-    if (!result && platform === "YouTube") {
-      try {
-        result = await callPipedYouTubeFallback(raw, mode);
-      } catch (error: any) {
-        lastProviderError = error?.message || "YouTube fallback provider failed.";
       }
     }
 
