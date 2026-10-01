@@ -1,0 +1,5 @@
+fastapi==0.115.14
+uvicorn[standard]==0.35.0
+yt-dlp
+yt-dlp-ejs
+bgutil-ytdlp-pot-provider
