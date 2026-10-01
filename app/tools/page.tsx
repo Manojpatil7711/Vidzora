@@ -1,5 +1,5 @@
 import Link from "next/link";
-import React from "react";
+import ToolsAd from "./tools-ad";
 
 const tools=[
 ["image-compressor","Image Compressor","Compress JPG, PNG and WebP","🗜️"],
@@ -11,29 +11,6 @@ const tools=[
 ["image-converter","JPG PNG WebP","Convert image formats","🔄"],
 ["image-cropper","Image Cropper","Crop and download images","✂️"]
 ] as const;
-
-function ToolsAd({variant}:{variant:"leaderboard"|"rectangle"|"rail"}){
-  const ref=React.useRef<HTMLDivElement>(null);
-  React.useEffect(()=>{
-    const host=ref.current;
-    if(!host||host.dataset.loaded==="true") return;
-    host.dataset.loaded="true";
-    const config=document.createElement("script");
-    const units={
-      leaderboard:{key:"e93216446708c55fc8572bc2545e5d77",width:728,height:90},
-      rectangle:{key:"f9cb0abd2b577279c3902c48cc354733",width:300,height:250},
-      rail:{key:"0e6f713e4710071fc62aac5d3ca9a40a",width:160,height:600}
-    } as const;
-    const u=units[variant];
-    config.text=`atOptions = { 'key' : '${u.key}', 'format' : 'iframe', 'height' : ${u.height}, 'width' : ${u.width}, 'params' : {} };`;
-    host.appendChild(config);
-    const script=document.createElement("script");
-    script.src=`https://mergerindirect.com/${u.key}/invoke.js`;
-    script.async=true;
-    host.appendChild(script);
-  },[variant]);
-  return <div ref={ref} className={`toolsAd toolsAd--${variant}`} aria-label="Advertisement"><span>ADVERTISEMENT</span></div>;
-}
 
 export const metadata={
   title:"Free Online Tools",
