@@ -23,6 +23,21 @@ const cfg: Record<K, { t: string; d: string; a: string; m?: boolean }> = {
   "image-cropper": { t: "Image Cropper", d: "Crop an image and download the result.", a: "image/jpeg,image/png,image/webp" },
 };
 
+const bannerPresets = [
+  ["Custom", "", ""],
+  ["YouTube Channel Banner", "2560", "1440"],
+  ["X Header", "1500", "500"],
+  ["LinkedIn Profile Banner", "1584", "396"],
+  ["LinkedIn Company Banner", "1128", "191"],
+  ["Facebook Cover", "820", "312"],
+  ["Discord Server Banner", "960", "540"],
+  ["GitHub Social Preview", "1280", "640"],
+  ["Reddit Community Banner", "1080", "128"],
+  ["Website Hero", "1920", "1080"],
+  ["Website Wide Hero", "1920", "800"],
+  ["Email Header", "600", "200"],
+] as const;
+
 const toolSponsorLinks = ["https://omg10.com/4/11918611","https://omg10.com/4/11918610","https://omg10.com/4/11918605","https://omg10.com/4/11565407","https://omg10.com/4/11566837","https://omg10.com/4/11587733"];
 
 function dl(b: Blob, n: string) {
@@ -385,10 +400,31 @@ export default function ToolClient({ tool }: { tool: K }) {
           </div>
           <div className="toolMessage">Targets the requested size while preserving the highest practical quality.</div>
         </>}
-        {tool === "image-resizer" && <div className="controls2">
-          <label>Width<input type="number" min="1" inputMode="numeric" value={w} onChange={e => setW(e.target.value)} onBlur={() => setW(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
-          <label>Height<input type="number" min="1" inputMode="numeric" value={h} onChange={e => setH(e.target.value)} onBlur={() => setH(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
-        </div>}
+        {tool === "image-resizer" && <>
+          <label className="control">Banner / platform preset
+            <select
+              defaultValue="Custom"
+              onChange={e => {
+                const preset = bannerPresets.find(([name]) => name === e.target.value);
+                if (preset?.[1] && preset?.[2]) {
+                  setW(preset[1]);
+                  setH(preset[2]);
+                }
+              }}
+            >
+              {bannerPresets.map(([name, width, height]) => (
+                <option key={name} value={name}>
+                  {name}{width ? ` — ${width}×${height}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="controls2">
+            <label>Width<input type="number" min="1" inputMode="numeric" value={w} onChange={e => setW(e.target.value)} onBlur={() => setW(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
+            <label>Height<input type="number" min="1" inputMode="numeric" value={h} onChange={e => setH(e.target.value)} onBlur={() => setH(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
+          </div>
+          <div className="toolMessage">Choose a platform preset or enter any custom pixel dimensions.</div>
+        </>}
         {tool === "image-converter" && <label className="control">Output
           <select value={fmt} onChange={e => setFmt(e.target.value)}>
             <option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option>
