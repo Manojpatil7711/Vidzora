@@ -10,10 +10,12 @@ type K =
   | "compress-pdf"
   | "merge-pdf"
   | "image-converter"
-  | "image-cropper";
+  | "image-cropper"
+  | "image-size-reducer";
 
 const cfg: Record<K, { t: string; d: string; a: string; m?: boolean }> = {
   "image-compressor": { t: "Image Compressor", d: "Compress JPG, PNG and WebP images in your browser.", a: "image/jpeg,image/png,image/webp" },
+  "image-size-reducer": { t: "Image Size Reducer", d: "Reduce an image to a target KB, MB or GB size in your browser.", a: "image/jpeg,image/png,image/webp" },
   "image-resizer": { t: "Image Resizer", d: "Resize an image to exact dimensions.", a: "image/jpeg,image/png,image/webp" },
   "jpg-to-pdf": { t: "JPG to PDF", d: "Convert one or more images into a single PDF.", a: "image/jpeg,image/png,image/webp", m: true },
   "pdf-to-jpg": { t: "PDF to JPG", d: "Convert PDF pages into JPG images.", a: "application/pdf" },
@@ -265,7 +267,7 @@ export default function ToolClient({ tool }: { tool: K }) {
     const outputs: { blob: Blob; name: string }[] = [];
 
     try {
-      if (tool === "image-compressor") {
+      if (tool === "image-compressor" || tool === "image-size-reducer") {
         const i = await read(files[0]);
         const targetValue = Number.parseFloat(targetSize);
         const targetBytes = targetValue * (targetUnit === "GB" ? 1024 * 1024 * 1024 : targetUnit === "MB" ? 1024 * 1024 : 1024);
