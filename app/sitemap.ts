@@ -5,6 +5,7 @@ const base = "https://vidzora-pi.vercel.app";
 export default function sitemap(): MetadataRoute.Sitemap {
   const tools = [
     "image-compressor",
+    "image-size-reducer",
     "image-resizer",
     "jpg-to-pdf",
     "pdf-to-jpg",
