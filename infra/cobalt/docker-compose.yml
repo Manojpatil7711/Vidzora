@@ -15,8 +15,13 @@ services:
       CORS_URL: "https://YOUR-VIDZORA-DOMAIN"
       API_AUTH_REQUIRED: "1"
       API_KEY_URL: "file:///keys.json"
-      RATELIMIT_MAX: "30"
-      TUNNEL_LIFESPAN: "90"
+      # Up to 5 hours per media item.
+      DURATION_LIMIT: "18000"
+      # Higher request throughput while keeping a bounded window.
+      RATELIMIT_WINDOW: "60"
+      RATELIMIT_MAX: "60"
+      # Keep tunnel metadata available longer for large downloads.
+      TUNNEL_LIFESPAN: "1800"
     volumes:
       - ./keys.json:/keys.json:ro
 
