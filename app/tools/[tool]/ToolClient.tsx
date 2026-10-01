@@ -237,7 +237,7 @@ export default function ToolClient({ tool }: { tool: K }) {
   const [h, setH] = useState("800");
   const [q, setQ] = useState(75);
   const [targetSize, setTargetSize] = useState("500");
-  const [targetUnit, setTargetUnit] = useState<"KB" | "MB">("KB");
+  const [targetUnit, setTargetUnit] = useState<"KB" | "MB" | "GB">("KB");
   const [fmt, setFmt] = useState("image/jpeg");
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 800, h: 600 });
   const [sponsorIndex, setSponsorIndex] = useState(0);
@@ -253,7 +253,7 @@ export default function ToolClient({ tool }: { tool: K }) {
       if (tool === "image-compressor") {
         const i = await read(files[0]);
         const targetValue = Number.parseFloat(targetSize);
-        const targetBytes = targetValue * (targetUnit === "MB" ? 1024 * 1024 : 1024);
+        const targetBytes = targetValue * (targetUnit === "GB" ? 1024 * 1024 * 1024 : targetUnit === "MB" ? 1024 * 1024 : 1024);
 
         if (!Number.isFinite(targetValue) || targetValue <= 0) {
           throw Error("Enter a valid target size.");
@@ -377,7 +377,7 @@ export default function ToolClient({ tool }: { tool: K }) {
               />
             </label>
             <label>Unit
-              <select value={targetUnit} onChange={e => setTargetUnit(e.target.value as "KB" | "MB")}>
+              <select value={targetUnit} onChange={e => setTargetUnit(e.target.value as "KB" | "MB" | "GB")}>
                 <option value="KB">KB</option>
                 <option value="MB">MB</option>
               </select>
