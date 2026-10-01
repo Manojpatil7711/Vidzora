@@ -21,7 +21,7 @@ const PLATFORM_HOSTS = {
 } as const;
 
 const MAX_URL_LENGTH = 4096;
-const REQUEST_TIMEOUT = 8000;
+const REQUEST_TIMEOUT = 15000;
 const REDDIT_RESOLVE_TIMEOUT = 12000;
 const REDDIT_PROVIDER_TIMEOUT = 7000;
 
@@ -227,7 +227,9 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
       disableMetadata: false,
       audioFormat: "mp3",
       downloadMode: mode === "audio" ? "audio" : "auto",
-      filenameStyle: "basic"
+      filenameStyle: "basic",
+      youtubeVideoCodec: "h264",
+      youtubeVideoContainer: "mp4"
     })
   }, REQUEST_TIMEOUT);
 
@@ -480,13 +482,20 @@ export async function POST(req: Request) {
     }
 
     if (!result) {
+      // Try the primary engine through its stable tunnel first, then retry the
+      // same engine without tunneling before falling back to another provider.
+      // Some sources reject tunneled preparation even though direct delivery works.
       for (const provider of providers) {
-        try {
-          result = await callProvider(raw, provider.base, provider.key, mode, provider.base === primaryBase);
-          if (result) break;
-        } catch (error: any) {
-          lastProviderError = error?.message || "Provider failed.";
+        const attempts = provider.base === primaryBase ? [true, false] : [false];
+        for (const alwaysProxy of attempts) {
+          try {
+            result = await callProvider(raw, provider.base, provider.key, mode, alwaysProxy);
+            if (result) break;
+          } catch (error: any) {
+            lastProviderError = error?.message || "Provider failed.";
+          }
         }
+        if (result) break;
       }
     }
 
