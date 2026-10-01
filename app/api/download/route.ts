@@ -392,7 +392,8 @@ async function callRedditFallback(raw: string) {
   // as if they were MP4 downloads; keep only browser-downloadable media here.
   const directFormats = formats.filter((format) => {
     const lower = format.url.toLowerCase();
-    return /\.(mp4|webm|mov|gif)(?:[?#]|$)/.test(lower) || lower.includes("v.redd.it/");
+    if (/\.(mpd|m3u8)(?:[?#]|$)/i.test(lower)) return false;
+    return /\.(mp4|webm|mov|gif)(?:[?#]|$)/i.test(lower);
   });
 
   if (!directFormats.length) throw new Error("REDDIT_NO_DIRECT_MEDIA");
