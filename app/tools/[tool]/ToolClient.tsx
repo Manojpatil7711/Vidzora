@@ -159,8 +159,11 @@ export default function ToolClient({ tool }: { tool: K }) {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
-  const [w, setW] = useState(1200);
-  const [h, setH] = useState(800);
+  // Keep dimension fields as strings while typing. Converting with +value on
+  // every keystroke turns an empty field into 0, which traps the first 0 and
+  // makes inputs such as 0800 awkward to edit on mobile.
+  const [w, setW] = useState("1200");
+  const [h, setH] = useState("800");
   const [q, setQ] = useState(75);
   const [fmt, setFmt] = useState("image/jpeg");
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 800, h: 600 });
@@ -183,7 +186,9 @@ export default function ToolClient({ tool }: { tool: K }) {
         outputs.push({ blob: b, name: "vidzora-compressed." + t.split("/")[1].replace("jpeg", "jpg") });
       } else if (tool === "image-resizer") {
         const i = await read(files[0]), x = document.createElement("canvas");
-        x.width = Math.max(1, w); x.height = Math.max(1, h);
+        const width = Math.max(1, Number.parseInt(w, 10) || 1);
+        const height = Math.max(1, Number.parseInt(h, 10) || 1);
+        x.width = width; x.height = height;
         x.getContext("2d")!.drawImage(i, 0, 0, x.width, x.height);
         outputs.push({
           blob: await blob(x, files[0].type === "image/png" ? "image/png" : "image/jpeg", .9),
@@ -283,8 +288,8 @@ export default function ToolClient({ tool }: { tool: K }) {
           <input type="range" min="20" max="95" value={q} onChange={e => setQ(+e.target.value)} /><b>{q}%</b>
         </label>}
         {tool === "image-resizer" && <div className="controls2">
-          <label>Width<input type="number" value={w} onChange={e => setW(+e.target.value)} /></label>
-          <label>Height<input type="number" value={h} onChange={e => setH(+e.target.value)} /></label>
+          <label>Width<input type="number" min="1" inputMode="numeric" value={w} onChange={e => setW(e.target.value)} onBlur={() => setW(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
+          <label>Height<input type="number" min="1" inputMode="numeric" value={h} onChange={e => setH(e.target.value)} onBlur={() => setH(v => String(Math.max(1, Number.parseInt(v, 10) || 1)))} /></label>
         </div>}
         {tool === "image-converter" && <label className="control">Output
           <select value={fmt} onChange={e => setFmt(e.target.value)}>
