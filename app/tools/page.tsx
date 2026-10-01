@@ -1,4 +1,5 @@
-import Link from "next/link";\nimport React from "react";
+import Link from "next/link";
+import React from "react";
 
 const tools=[
 ["image-compressor","Image Compressor","Compress JPG, PNG and WebP","🗜️"],
@@ -10,7 +11,6 @@ const tools=[
 ["image-converter","JPG PNG WebP","Convert image formats","🔄"],
 ["image-cropper","Image Cropper","Crop and download images","✂️"]
 ] as const;
-
 
 function ToolsAd({variant}:{variant:"leaderboard"|"rectangle"|"rail"}){
   const ref=React.useRef<HTMLDivElement>(null);
@@ -34,12 +34,52 @@ function ToolsAd({variant}:{variant:"leaderboard"|"rectangle"|"rail"}){
   },[variant]);
   return <div ref={ref} className={`toolsAd toolsAd--${variant}`} aria-label="Advertisement"><span>ADVERTISEMENT</span></div>;
 }
-\nexport const metadata={title:"Free Online Tools",description:"Free browser-based image and PDF tools for compressing, resizing, converting, cropping and merging files."};
 
-export default function Tools(){return <main className="toolsShell">
-<header className="nav"><Link className="brand" href="/">Vidzora<span>•</span></Link><nav><Link href="/">Downloader</Link><a className="toolsNavActive" href="#tools">Free Tools</a></nav></header>
-<section className="toolsHero"><div className="eyebrow">Vidzora • FREE TOOLS</div><h1>Free tools.<br/><em>Fast, private, simple.</em></h1><p>Compress images • Convert formats • Create & merge PDFs • Crop & resize — with ready-made social banner sizes, directly in your browser.</p></section>
-<section id="tools" className="toolsGrid">{tools.map(([s,t,d,i])=><Link className="toolCard" href={"/tools/"+s} key={s}><span className="toolIcon">{i}</span><div><h2>{t}</h2><p>{d}</p></div><b>Open →</b></Link>)}</section>
-<section className="toolsInfo"><h2>Private by design</h2><p>Image tools process files in your browser. No account is required.</p></section>
-<footer><span>© {new Date().getFullYear()} Vidzora</span><span><Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></span></footer>
-</main>}
+export const metadata={
+  title:"Free Online Tools",
+  description:"Free browser-based image and PDF tools for compressing, resizing, converting, cropping and merging files."
+};
+
+export default function Tools(){
+  return <main className="toolsShell">
+    <header className="nav">
+      <Link className="brand" href="/">Vidzora<span>•</span></Link>
+      <nav><Link href="/">Downloader</Link><a className="toolsNavActive" href="#tools">Free Tools</a></nav>
+    </header>
+
+    <section className="toolsHero">
+      <div className="eyebrow">Vidzora • FREE TOOLS</div>
+      <h1>Free tools.<br/><em>Fast, private, simple.</em></h1>
+      <p>Compress images • Convert formats • Create & merge PDFs • Crop & resize — with ready-made social banner sizes, directly in your browser.</p>
+    </section>
+
+    <ToolsAd variant="leaderboard" />
+
+    <div className="toolsContentFrame">
+      <section id="tools" className="toolsGrid">
+        {tools.map(([s,t,d,i])=>
+          <Link className="toolCard" href={"/tools/"+s} key={s}>
+            <span className="toolIcon">{i}</span>
+            <div><h2>{t}</h2><p>{d}</p></div>
+            <b>Open →</b>
+          </Link>
+        )}
+      </section>
+      <aside className="toolsRail" aria-label="Advertisement">
+        <ToolsAd variant="rail" />
+      </aside>
+    </div>
+
+    <section className="toolsMidAd"><ToolsAd variant="rectangle" /></section>
+
+    <section className="toolsInfo">
+      <h2>Private by design</h2>
+      <p>Image tools process files in your browser. No account is required.</p>
+    </section>
+
+    <footer>
+      <span>© {new Date().getFullYear()} Vidzora</span>
+      <span><Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></span>
+    </footer>
+  </main>;
+}
