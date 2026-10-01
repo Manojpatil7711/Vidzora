@@ -3,6 +3,7 @@ import ToolsAd from "./tools-ad";
 
 const tools=[
 ["image-compressor","Image Compressor","Compress JPG, PNG and WebP","🗜️"],
+["image-size-reducer","Image Size Reducer","Target an exact KB, MB or GB size","📉"],
 ["image-resizer","Image & Banner Resizer","Resize images exactly or use platform banner presets","↔️"],
 ["jpg-to-pdf","JPG to PDF","Turn images into PDF","📄"],
 ["pdf-to-jpg","PDF to JPG","Convert PDF pages to JPG","🖼️"],
