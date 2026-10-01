@@ -21,17 +21,6 @@ const platforms = [
   { name: "Rutube", url: "https://rutube.ru/" }
 ];
 
-const sponsorLinks = [
-  "https://omg10.com/4/11565407",
-  "https://mergerindirect.com/kf1ujxf25k?key=258266315b32d7e7a6335f103ba86138",
-  "https://mergerindirect.com/wh2w1pny3s?key=db5e91a9c2690a70a08a5c3f212d0792",
-  "https://mergerindirect.com/bkgdinwpwf?key=42404284f875722fcb453dd529a77edf",
-  "https://mergerindirect.com/gki9pg3ue?key=c076db285a55d97b0d4108e71fb80248",
-  "https://mergerindirect.com/enjf2abtxj?key=b47585e59da9216b6710b975c9427d62",
-  "https://mergerindirect.com/ybu4ut7r?key=dbfefcbb48fa3075cc6df76b00266c70",
-  "https://mergerindirect.com/bqy5u1gqks?key=2826d95b950a0e10a9711a02d7bba24b"
-];
-
 type Format = { label: string; url: string };
 
 function AdUnit({ variant }: { variant: "leaderboard" | "rail" | "native" }) {
@@ -95,31 +84,6 @@ function qualityName(label: string) {
   return label.replace(/^Video\s*[•·-]?\s*/i, "").trim() || "Available";
 }
 
-function DownloadSponsorModal({
-  href,
-  onContinue,
-  onClose
-}: {
-  href: string;
-  onContinue: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="sponsorModal" role="dialog" aria-modal="true" aria-label="Sponsored offer">
-      <div className="sponsorModalCard">
-        <div className="sponsorBannerLabel">ADVERTISEMENT</div>
-        <h3>Quick Download</h3>
-        <p>Your download has already started. You can close or go back from the sponsored ad at any time.</p>
-        <AdUnit variant="native" />
-        <a href={href} target="_blank" rel="nofollow sponsored noopener noreferrer" className="sponsorModalSponsor">Open sponsor ↗</a>
-        <div className="sponsorModalActions">
-          <button type="button" className="sponsorModalClose" onClick={onClose}>Close ad</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -128,10 +92,8 @@ export default function Home() {
   const [mediaType, setMediaType] = useState<"mp4" | "mp3">("mp4");
   const [audioLoading, setAudioLoading] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<Format | null>(null);
-  const [sponsorHref, setSponsorHref] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
-  const sponsorIndexRef = useRef(0);
 
   const formats: Format[] = Array.isArray(result?.formats) ? result.formats : [];
   const videoFormats = useMemo(() => formats.filter((f) => !isAudio(f)), [formats]);
@@ -212,17 +174,10 @@ export default function Home() {
 
   function chooseFormat(format: Format) {
     setSelectedFormat(format);
-    sponsorIndexRef.current = (sponsorIndexRef.current + 1) % sponsorLinks.length;
-    const sponsor = sponsorLinks[sponsorIndexRef.current];
 
-    // One user tap intentionally performs two independent actions:
-    // 1) open the sponsored destination while the click gesture is still active
-    //    (important on mobile browsers, which may block delayed popups);
-    // 2) start the actual media download through our same-origin endpoint.
-    // The sponsor must never be the download URL and must never gate/cancel it.
-    const sponsorWindow = window.open(sponsor, "_blank", "noopener,noreferrer");
-    if (!sponsorWindow) setSponsorHref(sponsor);
-
+    // The download button is a single-purpose action: it must start the
+    // requested file download and must never open a sponsor/ad destination.
+    // This keeps the mobile flow predictable and prevents accidental taps.
     const downloadHref = "/api/file?url=" + encodeURIComponent(format.url);
     const download = document.createElement("a");
     download.href = downloadHref;
@@ -231,10 +186,6 @@ export default function Home() {
     document.body.appendChild(download);
     download.click();
     download.remove();
-  }
-
-  function continueDownload() {
-    setSponsorHref("");
   }
 
   function copyVidzoraLink() {
@@ -318,7 +269,7 @@ export default function Home() {
 
           {!activeFormats.length && <div className="notice error">This source did not return a {mediaType.toUpperCase()} format.</div>}
           <AdUnit variant="native" />
-          <p className="microcopy downloadNote">{mediaType === "mp3" && audioLoading ? "Preparing MP3 audio…" : "Your download starts immediately. A sponsored offer may appear separately and can be closed or ignored."}</p>
+          <p className="microcopy downloadNote">Download starts immediately. Ads never replace or block your download.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
         </div>}
       </section>
@@ -375,7 +326,6 @@ export default function Home() {
 
       <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
 
-      {sponsorHref && <DownloadSponsorModal href={sponsorHref} onContinue={continueDownload} onClose={() => setSponsorHref("")} />}
     </main>
   );
 }
