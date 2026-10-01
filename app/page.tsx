@@ -215,23 +215,22 @@ export default function Home() {
     sponsorIndexRef.current = (sponsorIndexRef.current + 1) % sponsorLinks.length;
     const sponsor = sponsorLinks[sponsorIndexRef.current];
 
-    // Download ALWAYS has first priority. Start the same-origin attachment
-    // immediately from the user's click, then open the sponsored destination
-    // separately. Closing/backing out of the ad cannot cancel the download.
+    // One user tap intentionally performs two independent actions:
+    // 1) open the sponsored destination while the click gesture is still active
+    //    (important on mobile browsers, which may block delayed popups);
+    // 2) start the actual media download through our same-origin endpoint.
+    // The sponsor must never be the download URL and must never gate/cancel it.
+    const sponsorWindow = window.open(sponsor, "_blank", "noopener,noreferrer");
+    if (!sponsorWindow) setSponsorHref(sponsor);
+
     const downloadHref = "/api/file?url=" + encodeURIComponent(format.url);
     const download = document.createElement("a");
     download.href = downloadHref;
     download.rel = "noopener";
+    download.setAttribute("download", "");
     document.body.appendChild(download);
     download.click();
     download.remove();
-
-    // The sponsor is independent of the download. If the browser blocks a
-    // secondary popup, the download has already been started successfully.
-    window.setTimeout(() => {
-      const sponsorWindow = window.open(sponsor, "_blank", "noopener,noreferrer");
-      if (!sponsorWindow) setSponsorHref(sponsor);
-    }, 0);
   }
 
   function continueDownload() {
