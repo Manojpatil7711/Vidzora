@@ -233,7 +233,7 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
       youtubeVideoCodec: "h264",
       youtubeVideoContainer: "mp4"
     })
-  }, REQUEST_TIMEOUT);
+  }, timeoutMs);
 
   if (!response.ok) throw new Error("Download provider request failed.");
   const data = await response.json();
@@ -242,6 +242,33 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
   if (!formats.length) throw new Error("No downloadable format was returned.");
 
   return { formats, title: data?.filename || data?.title || "Ready to download", thumbnail: data?.thumbnail };
+}
+
+async function callYouTubeWorker(raw: string) {
+  const workerBase = process.env.YOUTUBE_WORKER_URL?.trim().replace(/\\/$/, "");
+  if (!workerBase) return null;
+
+  const workerSecret = process.env.YOUTUBE_WORKER_SECRET?.trim();
+  const response = await fetchWithTimeout(workerBase + "/v1/youtube", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      ...(workerSecret ? { Authorization: "Bearer " + workerSecret } : {})
+    },
+    body: JSON.stringify({ url: raw })
+  }, 1000 * 20);
+
+  if (!response.ok) throw new Error("YouTube worker request failed.");
+  const data = await response.json();
+  if (!data?.success || !Array.isArray(data?.formats) || !data.formats.length) {
+    throw new Error("YouTube worker returned no downloadable format.");
+  }
+  return {
+    formats: data.formats,
+    title: data.title || "YouTube video",
+    thumbnail: data.thumbnail
+  };
 }
 
 async function callPipedYouTubeFallback(raw: string, mode: "video" | "audio" = "video") {
@@ -495,26 +522,44 @@ export async function POST(req: Request) {
     }
 
     if (!result && platform === "YouTube") {
-      // YouTube is latency-sensitive on serverless. Race the self-hosted Cobalt
-      // engine against the rotating Piped pool instead of waiting through a
-      // long sequential chain. The first healthy provider wins.
-      const youtubeAttempts: Promise<Awaited<ReturnType<typeof callProvider>>>[] = [];
-
-      for (const provider of providers) {
-        const attempts = provider.base === primaryBase ? [true, false] : [false];
-        for (const alwaysProxy of attempts) {
-          youtubeAttempts.push(
-            callProvider(raw, provider.base, provider.key, mode, alwaysProxy, YOUTUBE_PROVIDER_TIMEOUT)
-          );
+      // Prefer the dedicated yt-dlp + EJS + Deno + bgutil worker when configured.
+      // Existing Cobalt/Piped paths remain intact as fallbacks.
+      if (process.env.YOUTUBE_WORKER_URL?.trim()) {
+        try {
+          result = await callYouTubeWorker(raw);
+        } catch (error: any) {
+          lastProviderError = error?.message || "YouTube worker failed.";
         }
       }
-      youtubeAttempts.push(callPipedYouTubeFallback(raw, mode));
 
-      try {
-        result = await Promise.any(youtubeAttempts);
-      } catch (error: any) {
-        const errors = Array.isArray(error?.errors) ? error.errors : [];
-        lastProviderError = errors.at(-1)?.message || "All YouTube providers failed.";
+      if (!result) {
+        for (const provider of providers) {
+          const attempts = provider.base === primaryBase ? [true, false] : [false];
+          for (const alwaysProxy of attempts) {
+            try {
+              result = await callProvider(
+                raw,
+                provider.base,
+                provider.key,
+                mode,
+                alwaysProxy,
+                YOUTUBE_PROVIDER_TIMEOUT
+              );
+              if (result) break;
+            } catch (error: any) {
+              lastProviderError = error?.message || "Provider failed.";
+            }
+          }
+          if (result) break;
+        }
+      }
+
+      if (!result) {
+        try {
+          result = await callPipedYouTubeFallback(raw, mode);
+        } catch (error: any) {
+          lastProviderError = error?.message || "Piped YouTube fallback failed.";
+        }
       }
     }
 
