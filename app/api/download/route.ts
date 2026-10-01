@@ -133,8 +133,8 @@ async function resolveRedditShareUrl(raw: string) {
         const directCandidates = [
           text.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)?.[1],
           text.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i)?.[1],
-          text.match(new RegExp("https?://(?:www\\.|old\\.)?reddit\\.com/r/[^\\s"'<>]+/comments/[A-Za-z0-9]+[^\\s"'<>]*", "i"))?.[0],
-          text.match(new RegExp("https?://(?:www\\.|old\\.)?reddit\\.com/comments/[A-Za-z0-9]+[^\\s"'<>]*", "i"))?.[0]
+          text.match(new RegExp("https?://(?:www\\.|old\\.)?reddit\\.com/r/[^\\s<>]+/comments/[A-Za-z0-9]+[^\\s<>]*", "i"))?.[0],
+          text.match(new RegExp("https?://(?:www\\.|old\\.)?reddit\\.com/comments/[A-Za-z0-9]+[^\\s<>]*", "i"))?.[0]
         ].filter((value): value is string => Boolean(value));
 
         for (const candidateRaw of directCandidates) {
