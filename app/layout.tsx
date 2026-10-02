@@ -75,9 +75,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="monetag" content="f17969125c8c4941410a44ce66d071ca" />
-        <script src="https://quge5.com/88/tag.min.js" data-zone="288907" async data-cfasync="false"></script>
-        <script dangerouslySetInnerHTML={{ __html: `(function(s){s.dataset.zone="11936478";s.src="https://al5sm.com/tag.min.js"})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement("script")))` }} />
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9655050547873870"
@@ -86,12 +83,6 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        <script
-          id="vidzora-ad-service-worker"
-          dangerouslySetInnerHTML={{
-            __html: `if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {}); }); }`,
-          }}
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
