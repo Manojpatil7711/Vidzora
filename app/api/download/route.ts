@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { URL } from "node:url";
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 
 const PLATFORM_HOSTS = {
   TikTok: new Set(["tiktok.com", "www.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"]),
@@ -27,9 +27,9 @@ const YOUTUBE_PROVIDER_TIMEOUT = 10000;
 const PIPED_INSTANCE_TIMEOUT = 4500;
 const REDDIT_RESOLVE_TIMEOUT = 12000;
 const REDDIT_PROVIDER_TIMEOUT = 7000;
-const DOWNLOAD_TOKEN_SECRET = process.env.DOWNLOAD_TOKEN_SECRET?.trim() || process.env.COBALT_API_KEY?.trim() || "vidzora-download-token-fallback";
+const DOWNLOAD_TOKEN_SECRET = process.env.DOWNLOAD_TOKEN_SECRET?.trim() || process.env.COBALT_API_KEY?.trim() || "";
 
-function createDownloadToken(target: string) {
+function createDownloadToken(target: string) {\n  if (!DOWNLOAD_TOKEN_SECRET) throw new Error("Download signing secret is not configured.");
   const payload = Buffer.from(JSON.stringify({ url: target, exp: Date.now() + 10 * 60 * 1000 }), "utf8").toString("base64url");
   const signature = createHmac("sha256", DOWNLOAD_TOKEN_SECRET).update(payload).digest("base64url");
   return payload + "." + signature;
@@ -546,7 +546,7 @@ export async function POST(req: Request) {
       if (provider.base && !providers.some((p) => p.base === provider.base)) providers.push(provider);
     }
 
-    let result: Awaited<ReturnType<typeof callProvider>> | null = null;
+    const requestId = randomUUID();\n    let result: Awaited<ReturnType<typeof callProvider>> | null = null;
     let lastProviderError = "";
 
     if (!result && platform === "Reddit" && mode === "video") {
