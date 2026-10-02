@@ -355,8 +355,6 @@ export default function ToolClient({ tool }: { tool: K }) {
         const hh = Math.max(1, Math.min(crop.h, i.naturalHeight - y));
         const safeCrop = safeCanvas(ww, hh);
         const z = safeCrop.canvas;
-        const cropScaleX = safeCrop.width / ww;
-        const cropScaleY = safeCrop.height / hh;
         z.getContext("2d")!.drawImage(i, x, y, ww, hh, 0, 0, safeCrop.width, safeCrop.height);
         if (safeCrop.scale < 1) setMsg("Large crop was safely scaled to avoid low-memory errors.");
         outputs.push({ blob: await blob(z, "image/png"), name: "vidzora-crop.png" });
