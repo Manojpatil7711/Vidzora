@@ -644,7 +644,10 @@ export async function POST(req: Request) {
       platform,
       title: result.title,
       thumbnail: result.thumbnail,
-      formats: result.formats
+      formats: result.formats.map((format) => ({
+        ...format,
+        url: "/api/file?token=" + encodeURIComponent(createDownloadToken(format.url))
+      }))
     });
   } catch (e: any) {
     const message = e?.name === "AbortError" ? "The media engine timed out. Please try again." : e?.message || "Unable to process this link.";
