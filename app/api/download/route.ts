@@ -245,7 +245,7 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
 }
 
 async function callYouTubeWorker(raw: string) {
-  const workerBase = process.env.YOUTUBE_WORKER_URL?.trim().replace(/\\/$/, "");
+  const workerBase = process.env.YOUTUBE_WORKER_URL?.trim().replace(/\/$/, "");
   if (!workerBase) return null;
 
   const workerSecret = process.env.YOUTUBE_WORKER_SECRET?.trim();
