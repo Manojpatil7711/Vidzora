@@ -50,19 +50,9 @@ function AdUnit({ variant }: { variant: "leaderboard" | "rail" | "native" }) {
       host.appendChild(config);
       load("https://mergerindirect.com/b3cb606d29e82761d924c3596c020a6b/invoke.js");
     } else {
-      load("https://mergerindirect.com/6434934b5a2b0ca0af1a76e0e9f70834/invoke.js", {
-        "data-cfasync": "false"
-      });
-      const container = document.createElement("div");
-      container.id = "container-6434934b5a2b0ca0af1a76e0e9f70834";
-      container.className = "nativeAdContainer";
-      host.appendChild(container);
-    }
-
-    // Auxiliary network scripts are loaded once, after the main UI is ready.
-    if (variant === "native") {
-      load("https://mergerindirect.com/b9/ff/bc/b9ffbca321bc3df764cceba5eb902ea2.js");
-      load("https://mergerindirect.com/97/d2/e4/97d2e4b2177f582889d754c1e4096aca.js");
+      // Intentionally no native/popunder ad script here. The downloader action
+      // must never trigger an overlay, new tab, or popunder.
+      host.dataset.adPolicy = "non-intrusive-only";
     }
   }, [variant]);
 
@@ -178,7 +168,7 @@ export default function Home() {
     // The download button is a single-purpose action: it must start the
     // requested file download and must never open a sponsor/ad destination.
     // This keeps the mobile flow predictable and prevents accidental taps.
-    const downloadHref = "/api/file?url=" + encodeURIComponent(format.url);
+    const downloadHref = format.url;
     const download = document.createElement("a");
     download.href = downloadHref;
     download.rel = "noopener";
@@ -268,7 +258,6 @@ export default function Home() {
           </div>
 
           {!activeFormats.length && <div className="notice error">This source did not return a {mediaType.toUpperCase()} format.</div>}
-          <AdUnit variant="native" />
           <p className="microcopy downloadNote">Download starts immediately. Ads never replace or block your download.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
         </div>}
