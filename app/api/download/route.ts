@@ -8,7 +8,7 @@ const PLATFORM_HOSTS = {
   YouTube: new Set(["youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com", "music.youtube.com"]),
   Facebook: new Set(["facebook.com", "www.facebook.com", "m.facebook.com", "mbasic.facebook.com", "fb.watch"]),
   X: new Set(["x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com"]),
-  Reddit: new Set(["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com", "redd.it", "v.redd.it"]),
+  Reddit: new Set(["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com", "redd.it"]),
   Pinterest: new Set(["pinterest.com", "www.pinterest.com", "pin.it"]),
   Vimeo: new Set(["vimeo.com", "www.vimeo.com", "player.vimeo.com"]),
   Dailymotion: new Set(["dailymotion.com", "www.dailymotion.com", "m.dailymotion.com", "dai.ly"]),
@@ -69,14 +69,6 @@ async function resolveRedditShareUrl(raw: string) {
   try {
     const u = new URL(raw.trim());
     const host = u.hostname.toLowerCase();
-
-    // redd.it shortlinks point directly to a Reddit post id. Normalize them
-    // before the native Reddit resolver so the post JSON/media path is used.
-    if (host === "redd.it" && /^[A-Za-z0-9]+$/.test(u.pathname.replace(/^\//, ""))) {
-      const postId = u.pathname.replace(/^\//, "");
-      return `https://www.reddit.com/comments/${postId}`;
-    }
-
     const isShare =
       ["reddit.com", "www.reddit.com", "old.reddit.com", "m.reddit.com"].includes(host) &&
       /\/s\/[A-Za-z0-9_-]+/.test(u.pathname);
@@ -371,18 +363,6 @@ async function callRedditFallback(raw: string) {
   if (raw.includes("/s/")) throw new Error("REDDIT_SHARE_UNRESOLVED");
 
   const u = new URL(raw);
-
-  // Also accept direct Reddit-hosted media URLs copied from the player.
-  if (u.hostname.toLowerCase() === "v.redd.it") {
-    const directUrl = u.toString();
-    if (/\.(mp4|webm|mov|gif)(?:[?#]|$)/i.test(directUrl)) {
-      return {
-        formats: [{ label: "Video • Direct MP4", url: directUrl }],
-        title: "Reddit video"
-      };
-    }
-  }
-
   const match = u.pathname.match(/\/comments\/([A-Za-z0-9]+)/);
   if (!match?.[1]) throw new Error("REDDIT_POST_ID_MISSING");
 
