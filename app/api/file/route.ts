@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-const DOWNLOAD_TOKEN_SECRET = process.env.DOWNLOAD_TOKEN_SECRET?.trim() || process.env.COBALT_API_KEY?.trim() || "vidzora-download-token-fallback";
+const DOWNLOAD_TOKEN_SECRET = process.env.DOWNLOAD_TOKEN_SECRET?.trim() || process.env.COBALT_API_KEY?.trim() || "";
 
-function verifyDownloadToken(token: string) {
+function verifyDownloadToken(token: string) {\n  if (!DOWNLOAD_TOKEN_SECRET) return null;
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return null;
   const expected = createHmac("sha256", DOWNLOAD_TOKEN_SECRET).update(payload).digest("base64url");
