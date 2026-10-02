@@ -22,10 +22,14 @@ const PLATFORM_HOSTS = {
 
 const MAX_URL_LENGTH = 4096;
 const REQUEST_TIMEOUT = 15000;
-const YOUTUBE_PROVIDER_TIMEOUT = 6500;
+const YOUTUBE_PROVIDER_TIMEOUT = 10000;
 const PIPED_INSTANCE_TIMEOUT = 4500;
 const REDDIT_RESOLVE_TIMEOUT = 12000;
 const REDDIT_PROVIDER_TIMEOUT = 7000;
+
+// Allow the server-side orchestration layer enough time to try the primary
+// engine and its safe fallbacks without making the browser wait indefinitely.
+export const maxDuration = 60;
 
 function detectPlatform(raw: string) {
   try {
@@ -212,36 +216,60 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
 }
 
 async function callProvider(raw: string, base: string, apiKey?: string, mode: "video" | "audio" = "video", alwaysProxy = false, timeoutMs = REQUEST_TIMEOUT) {
-  const response = await fetchWithTimeout(base, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      ...(apiKey ? { Authorization: "Api-Key " + apiKey } : {})
-    },
-    body: JSON.stringify({
-      url: raw,
-      videoQuality: "max",
-      // Prefer a server-owned Cobalt tunnel for the primary engine. This avoids
-      // exposing short-lived origin URLs to the browser and gives the user a
-      // stable download target for the duration of the tunnel lifespan.
-      alwaysProxy,
-      disableMetadata: false,
-      audioFormat: "mp3",
-      downloadMode: mode === "audio" ? "audio" : "auto",
-      filenameStyle: "basic",
-      youtubeVideoCodec: "h264",
-      youtubeVideoContainer: "mp4"
-    })
-  }, timeoutMs);
+  let lastError: unknown = null;
 
-  if (!response.ok) throw new Error("Download provider request failed.");
-  const data = await response.json();
-  if (data?.status === "error") throw new Error(data?.error?.code || "Provider could not process this link.");
-  const formats = normalizeFormats(data, mode);
-  if (!formats.length) throw new Error("No downloadable format was returned.");
+  // A short, bounded retry handles transient Railway/network 5xx/429 failures
+  // without creating an endless retry loop or noticeably delaying normal users.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(base, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          ...(apiKey ? { Authorization: "Api-Key " + apiKey } : {})
+        },
+        body: JSON.stringify({
+          url: raw,
+          videoQuality: "max",
+          // Prefer a server-owned Cobalt tunnel for the primary engine. This avoids
+          // exposing short-lived origin URLs to the browser and gives the user a
+          // stable download target for the duration of the tunnel lifespan.
+          alwaysProxy,
+          disableMetadata: false,
+          audioFormat: "mp3",
+          downloadMode: mode === "audio" ? "audio" : "auto",
+          filenameStyle: "basic",
+          youtubeVideoCodec: "h264",
+          youtubeVideoContainer: "mp4"
+        })
+      }, timeoutMs);
 
-  return { formats, title: data?.filename || data?.title || "Ready to download", thumbnail: data?.thumbnail };
+      if (!response.ok) {
+        const transient = response.status === 408 || response.status === 425 || response.status === 429 || response.status >= 500;
+        if (transient && attempt === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
+          continue;
+        }
+        throw new Error("Download provider request failed.");
+      }
+
+      const data = await response.json();
+      if (data?.status === "error") throw new Error(data?.error?.code || "Provider could not process this link.");
+      const formats = normalizeFormats(data, mode);
+      if (!formats.length) throw new Error("No downloadable format was returned.");
+
+      return { formats, title: data?.filename || data?.title || "Ready to download", thumbnail: data?.thumbnail };
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        continue;
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Download provider request failed.");
 }
 
 async function callYouTubeWorker(raw: string) {
