@@ -41,6 +41,30 @@ const bannerPresets = [
 ] as const;
 
 const toolSponsorLinks = ["https://omg10.com/4/11918611","https://omg10.com/4/11918610","https://omg10.com/4/11918605","https://omg10.com/4/11565407","https://omg10.com/4/11566837","https://omg10.com/4/11587733"];
+const MAX_WORKING_PIXELS = 8_000_000;
+const MAX_WORKING_SIDE = 4096;
+
+function fitImageDimensions(width: number, height: number) {
+  const safeWidth = Math.max(1, width);
+  const safeHeight = Math.max(1, height);
+  const sideScale = MAX_WORKING_SIDE / Math.max(safeWidth, safeHeight);
+  const pixelScale = Math.sqrt(MAX_WORKING_PIXELS / (safeWidth * safeHeight));
+  const scale = Math.min(1, sideScale, pixelScale);
+  return {
+    width: Math.max(1, Math.floor(safeWidth * scale)),
+    height: Math.max(1, Math.floor(safeHeight * scale)),
+    scale,
+  };
+}
+
+function safeCanvas(width: number, height: number) {
+  const safe = fitImageDimensions(width, height);
+  const canvas = document.createElement("canvas");
+  canvas.width = safe.width;
+  canvas.height = safe.height;
+  return { canvas, ...safe };
+}
+
 
 function dl(b: Blob, n: string) {
   const a = document.createElement("a");
@@ -112,19 +136,21 @@ async function compressToTargetSize(
   const type = "image/webp";
   const sourceW = image.naturalWidth;
   const sourceH = image.naturalHeight;
-  let scale = 1;
+  const safeSource = fitImageDimensions(sourceW, sourceH);
+  let scale = safeSource.scale;
 
   for (let pass = 0; pass < 8; pass++) {
     const width = Math.max(1, Math.round(sourceW * scale));
     const height = Math.max(1, Math.round(sourceH * scale));
+    const safe = fitImageDimensions(width, height);
     const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = safe.width;
+    canvas.height = safe.height;
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) throw Error("Image processing is not supported on this device.");
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(image, 0, 0, width, height);
+    ctx.drawImage(image, 0, 0, safe.width, safe.height);
 
     // Binary-search quality instead of blindly lowering it. This keeps the
     // highest possible visual quality for the requested target size.
@@ -145,7 +171,7 @@ async function compressToTargetSize(
     }
 
     if (best) {
-      return { blob: best, type, width, height };
+      return { blob: best, type, width: safe.width, height: safe.height };
     }
 
     // Target is too small at this resolution even at minimum quality.
@@ -157,13 +183,14 @@ async function compressToTargetSize(
 
   // A very aggressive target may be below what the browser encoder can
   // produce. Return the smallest safe result rather than failing silently.
+  const fallbackSize = fitImageDimensions(sourceW * scale, sourceH * scale);
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(sourceW * scale));
-  canvas.height = Math.max(1, Math.round(sourceH * scale));
+  canvas.width = fallbackSize.width;
+  canvas.height = fallbackSize.height;
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, fallbackSize.width, fallbackSize.height);
   const fallback = await blob(canvas, type, 0.05);
   return { blob: fallback, type, width: canvas.width, height: canvas.height };
 }
@@ -282,10 +309,12 @@ export default function ToolClient({ tool }: { tool: K }) {
           name: "vidzora-compressed.webp"
         });
       } else if (tool === "image-resizer") {
-        const i = await read(files[0]), x = document.createElement("canvas");
-        const width = Math.max(1, Number.parseInt(w, 10) || 1);
-        const height = Math.max(1, Number.parseInt(h, 10) || 1);
-        x.width = width; x.height = height;
+        const i = await read(files[0]);
+        const requestedWidth = Math.max(1, Number.parseInt(w, 10) || 1);
+        const requestedHeight = Math.max(1, Number.parseInt(h, 10) || 1);
+        const safe = safeCanvas(requestedWidth, requestedHeight);
+        const x = safe.canvas;
+        if (safe.scale < 1) setMsg("Large output was safely scaled to fit this device's memory."); 
         x.getContext("2d")!.drawImage(i, 0, 0, x.width, x.height);
         outputs.push({
           blob: await blob(x, files[0].type === "image/png" ? "image/png" : "image/jpeg", .9),
@@ -309,9 +338,11 @@ export default function ToolClient({ tool }: { tool: K }) {
           outputs.push({ blob: out, name: "vidzora-compressed.pdf" });
         }
       } else if (tool === "image-converter") {
-        const i = await read(files[0]), x = document.createElement("canvas");
-        x.width = i.naturalWidth; x.height = i.naturalHeight;
-        x.getContext("2d")!.drawImage(i, 0, 0);
+        const i = await read(files[0]);
+        const safe = safeCanvas(i.naturalWidth, i.naturalHeight);
+        const x = safe.canvas;
+        if (safe.scale < 1) setMsg("Large image was safely downscaled to avoid low-memory errors.");
+        x.getContext("2d")!.drawImage(i, 0, 0, x.width, x.height);
         outputs.push({
           blob: await blob(x, fmt, .92),
           name: "vidzora-converted." + fmt.split("/")[1].replace("jpeg", "jpg")
@@ -322,9 +353,12 @@ export default function ToolClient({ tool }: { tool: K }) {
         const y = Math.max(0, Math.min(crop.y, i.naturalHeight - 1));
         const ww = Math.max(1, Math.min(crop.w, i.naturalWidth - x));
         const hh = Math.max(1, Math.min(crop.h, i.naturalHeight - y));
-        const z = document.createElement("canvas");
-        z.width = ww; z.height = hh;
-        z.getContext("2d")!.drawImage(i, x, y, ww, hh, 0, 0, ww, hh);
+        const safeCrop = safeCanvas(ww, hh);
+        const z = safeCrop.canvas;
+        const cropScaleX = safeCrop.width / ww;
+        const cropScaleY = safeCrop.height / hh;
+        z.getContext("2d")!.drawImage(i, x, y, ww, hh, 0, 0, safeCrop.width, safeCrop.height);
+        if (safeCrop.scale < 1) setMsg("Large crop was safely scaled to avoid low-memory errors.");
         outputs.push({ blob: await blob(z, "image/png"), name: "vidzora-crop.png" });
       }
 
@@ -338,7 +372,13 @@ export default function ToolClient({ tool }: { tool: K }) {
         if (!msg) setMsg("Done — your file is ready.");
       }
     } catch (e: any) {
-      setMsg(e?.message || "Could not process this file.");
+      const name = String(e?.name || "");
+      const message = String(e?.message || "");
+      if (/memory|allocation|canvas|indexsize|encoding/i.test(name + " " + message)) {
+        setMsg("This image is too large for the device memory. Vidzora could not safely process it.");
+      } else {
+        setMsg(message || "Could not process this file.");
+      }
     } finally {
       setBusy(false);
     }
