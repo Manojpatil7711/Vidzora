@@ -1,38 +1,44 @@
 import { NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
-const ALLOWED_MEDIA_HOSTS = [
-  "cobalt-production-45cd.up.railway.app",
-  "api.cobalt.tools",
-  "pipedapi.kavin.rocks",
-  "pipedapi.leptons.xyz",
-  "www.tikwm.com",
-  "v.redd.it"
-];
+const DOWNLOAD_TOKEN_SECRET = process.env.DOWNLOAD_TOKEN_SECRET?.trim() || process.env.COBALT_API_KEY?.trim() || "vidzora-download-token-fallback";
 
-function isAllowedMediaHost(hostname: string) {
-  const host = hostname.toLowerCase().replace(/\.$/, "");
-  return ALLOWED_MEDIA_HOSTS.some((allowed) => host === allowed || host.endsWith("." + allowed));
+function verifyDownloadToken(token: string) {
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return null;
+  const expected = createHmac("sha256", DOWNLOAD_TOKEN_SECRET).update(payload).digest("base64url");
+  try {
+    if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  } catch { return null; }
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (typeof data?.url !== "string" || typeof data?.exp !== "number" || data.exp < Date.now()) return null;
+    const target = new URL(data.url);
+    if (target.protocol !== "https:") return null;
+    return target.toString();
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(req: Request) {
   try {
     const requestUrl = new URL(req.url);
-    const target = requestUrl.searchParams.get("url");
+    const token = requestUrl.searchParams.get("token");
 
+    if (!token) {
+      return NextResponse.json({ success: false, error: "Missing download token." }, { status: 400 });
+    }
+
+    const target = verifyDownloadToken(token);
     if (!target) {
-      return NextResponse.json({ success: false, error: "Missing download URL." }, { status: 400 });
+      return NextResponse.json({ success: false, error: "This download link has expired. Please generate a fresh link." }, { status: 410 });
     }
 
-    const mediaUrl = new URL(target);
-    if (mediaUrl.protocol !== "https:" || !isAllowedMediaHost(mediaUrl.hostname)) {
-      return NextResponse.json({ success: false, error: "Invalid download URL." }, { status: 400 });
-    }
-
-    // Do not proxy the media bytes through a Vercel Function. Large movies can
-    // legitimately take minutes to transfer, while serverless execution has a
-    // finite lifetime. Redirecting lets the browser download directly from the
-    // media engine/origin and removes Vercel from the long-lived data path.
-    return NextResponse.redirect(mediaUrl.toString(), 302);
+    // The URL is authenticated by a short-lived server-issued token. Redirecting
+    // keeps large media bytes out of the Vercel Function data path.
+    return NextResponse.redirect(target, 302);
   } catch {
     return NextResponse.json(
       { success: false, error: "Unable to start the download. Please generate a fresh link." },
