@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { URL } from "node:url";
+import { createHmac } from "node:crypto";
 
 const PLATFORM_HOSTS = {
   TikTok: new Set(["tiktok.com", "www.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"]),
@@ -26,6 +27,13 @@ const YOUTUBE_PROVIDER_TIMEOUT = 10000;
 const PIPED_INSTANCE_TIMEOUT = 4500;
 const REDDIT_RESOLVE_TIMEOUT = 12000;
 const REDDIT_PROVIDER_TIMEOUT = 7000;
+const DOWNLOAD_TOKEN_SECRET = process.env.DOWNLOAD_TOKEN_SECRET?.trim() || process.env.COBALT_API_KEY?.trim() || "vidzora-download-token-fallback";
+
+function createDownloadToken(target: string) {
+  const payload = Buffer.from(JSON.stringify({ url: target, exp: Date.now() + 10 * 60 * 1000 }), "utf8").toString("base64url");
+  const signature = createHmac("sha256", DOWNLOAD_TOKEN_SECRET).update(payload).digest("base64url");
+  return payload + "." + signature;
+}
 
 // Allow the server-side orchestration layer enough time to try the primary
 // engine and its safe fallbacks without making the browser wait indefinitely.
