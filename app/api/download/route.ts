@@ -29,7 +29,8 @@ const REDDIT_RESOLVE_TIMEOUT = 12000;
 const REDDIT_PROVIDER_TIMEOUT = 7000;
 const DOWNLOAD_TOKEN_SECRET = process.env.DOWNLOAD_TOKEN_SECRET?.trim() || process.env.COBALT_API_KEY?.trim() || "";
 
-function createDownloadToken(target: string) {\n  if (!DOWNLOAD_TOKEN_SECRET) throw new Error("Download signing secret is not configured.");
+function createDownloadToken(target: string) {
+  if (!DOWNLOAD_TOKEN_SECRET) throw new Error("Download signing secret is not configured.");
   const payload = Buffer.from(JSON.stringify({ url: target, exp: Date.now() + 10 * 60 * 1000 }), "utf8").toString("base64url");
   const signature = createHmac("sha256", DOWNLOAD_TOKEN_SECRET).update(payload).digest("base64url");
   return payload + "." + signature;
@@ -546,7 +547,8 @@ export async function POST(req: Request) {
       if (provider.base && !providers.some((p) => p.base === provider.base)) providers.push(provider);
     }
 
-    const requestId = randomUUID();\n    let result: Awaited<ReturnType<typeof callProvider>> | null = null;
+    const requestId = randomUUID();
+    let result: Awaited<ReturnType<typeof callProvider>> | null = null;
     let lastProviderError = "";
 
     if (!result && platform === "Reddit" && mode === "video") {
