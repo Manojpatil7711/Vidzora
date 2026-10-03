@@ -213,7 +213,6 @@ export default function Home() {
           {platforms.map((p) => (
             <button className="active platformLink" type="button" key={p.name} onClick={() => { setError(""); setUrl(""); inputRef.current?.focus(); }} aria-label={`Paste a ${p.name} URL`} title={`Paste a ${p.name} URL`}>
               <span>{p.name}</span>
-              {p.name === "YouTube" && <small className="platformSoon" aria-label="YouTube coming soon">🔜</small>}
               </button>
           ))}
         </div>
