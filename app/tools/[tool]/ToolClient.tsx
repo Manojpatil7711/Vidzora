@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ToolsAd from "../tools-ad";
 
 type K =
   | "image-compressor"
@@ -40,7 +41,6 @@ const bannerPresets = [
   ["Email Header", "600", "200"],
 ] as const;
 
-const toolSponsorLinks = ["https://omg10.com/4/11918611","https://omg10.com/4/11918610","https://omg10.com/4/11918605","https://omg10.com/4/11565407","https://omg10.com/4/11566837","https://omg10.com/4/11587733"];
 const MAX_WORKING_PIXELS = 8_000_000;
 const MAX_WORKING_SIDE = 4096;
 
@@ -72,37 +72,6 @@ function dl(b: Blob, n: string) {
   a.download = n;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-}
-
-function waitForSponsorReturn(adWindow: Window | null, maxWait = 15000) {
-  return new Promise<void>((resolve) => {
-    const started = Date.now();
-    let finished = false;
-
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibility);
-      resolve();
-    };
-
-    const onFocus = () => {
-      if (Date.now() - started >= 1200) finish();
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible" && Date.now() - started >= 1200) finish();
-    };
-
-    const timer = window.setInterval(() => {
-      if (adWindow?.closed || Date.now() - started >= maxWait) finish();
-    }, 250);
-
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibility);
-  });
 }
 
 function read(f: File) {
@@ -284,9 +253,8 @@ export default function ToolClient({ tool }: { tool: K }) {
   const [targetUnit, setTargetUnit] = useState<"KB" | "MB" | "GB">("KB");
   const [fmt, setFmt] = useState("image/jpeg");
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 800, h: 600 });
-  const [sponsorIndex, setSponsorIndex] = useState(0);
 
-  async function run(adWindow: Window | null = null) {
+  async function run() {
     if (!files.length) return setMsg("Choose a file first.");
     setBusy(true);
     setMsg("");
@@ -361,11 +329,6 @@ export default function ToolClient({ tool }: { tool: K }) {
       }
 
       if (outputs.length) {
-        if (adWindow) {
-          await waitForSponsorReturn(adWindow);
-        } else {
-          await new Promise<void>((resolve) => window.setTimeout(resolve, 1200));
-        }
         outputs.forEach((item) => dl(item.blob, item.name));
         if (!msg) setMsg("Done — your file is ready.");
       }
@@ -388,19 +351,7 @@ export default function ToolClient({ tool }: { tool: K }) {
       setMsg("Choose a file first.");
       return;
     }
-
-    const next = (sponsorIndex + 1) % toolSponsorLinks.length;
-    setSponsorIndex(next);
-
-    // Monetag SmartLink opens immediately from the user's Generate click.
-    let adWindow: Window | null = null;
-    try {
-      adWindow = window.open(toolSponsorLinks[next], "_blank", "noopener,noreferrer");
-    } catch {
-      adWindow = null;
-    }
-
-    void run(adWindow);
+    void run();
   }
 
   return <main className="toolShell">
@@ -480,6 +431,7 @@ export default function ToolClient({ tool }: { tool: K }) {
         {msg && <div className="toolMessage">{msg}</div>}
       </div>
       <div className="toolTrust"><b>✓ Simple</b><b>✓ Mobile friendly</b><b>✓ No account</b></div>
+      <div className="toolPageAd"><ToolsAd variant="rectangle" /></div>
 
     </section>
   </main>;
