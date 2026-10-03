@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { gatedDownload } from "@/lib/ad-gate";
+import { gatedDownload } from "../lib/ad-gate";
 
 const platforms = [
   { name: "YouTube", url: "https://www.youtube.com/", paused: true },
