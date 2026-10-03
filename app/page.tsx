@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 const platforms = [
-  { name: "YouTube", url: "https://www.youtube.com/" },
+  { name: "YouTube", url: "https://www.youtube.com/", paused: true },
   { name: "Instagram", url: "https://www.instagram.com/" },
   { name: "Facebook", url: "https://www.facebook.com/" },
   { name: "TikTok", url: "https://www.tiktok.com/" },
@@ -211,9 +211,24 @@ export default function Home() {
 
         <div className="platforms" aria-label="Supported platforms">
           {platforms.map((p) => (
-            <button className="active platformLink" type="button" key={p.name} onClick={() => { setError(""); setUrl(""); inputRef.current?.focus(); }} aria-label={`Paste a ${p.name} URL`} title={`Paste a ${p.name} URL`}>
-              <span>{p.name}</span>
-              </button>
+            <button
+              className={p.paused ? "platformLink platformPaused" : "platformLink"}
+              type="button"
+              key={p.name}
+              onClick={() => {
+                setError("");
+                if (p.paused) {
+                  setError("YouTube downloads are currently paused. Please use another supported public platform.");
+                  return;
+                }
+                setUrl("");
+                inputRef.current?.focus();
+              }}
+              aria-label={p.paused ? `${p.name} downloads paused` : `Paste a ${p.name} URL`}
+              title={p.paused ? `${p.name} downloads paused` : `Paste a ${p.name} URL`}
+            >
+              <span>{p.name}{p.paused ? " • Paused" : ""}</span>
+            </button>
           ))}
         </div>
         <div className="heroAdRail"><AdUnit variant="rail" /></div>
