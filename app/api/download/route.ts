@@ -69,8 +69,8 @@ async function resolveRedditShareUrl(raw: string) {
   try {
     const u = new URL(raw.trim());
     const host = u.hostname.toLowerCase();
-    if (host === "redd.it" && /^[A-Za-z0-9]+$/.test(u.pathname.replace(/^\\//, ""))) {
-      const postId = u.pathname.replace(/^\\//, "");
+    if (host === "redd.it" && /^[A-Za-z0-9]+$/.test(u.pathname.replace(/^\//, ""))) {
+      const postId = u.pathname.replace(/^\//, "");
       return `https://www.reddit.com/comments/${postId}`;
     }
 
