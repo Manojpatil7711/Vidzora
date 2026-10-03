@@ -273,6 +273,7 @@ export default function Home() {
           </div>
 
           {!activeFormats.length && <div className="notice error">This source did not return a {mediaType.toUpperCase()} format.</div>}
+          <div className="resultAd"><AdUnit variant="leaderboard" /></div>
           <p className="microcopy downloadNote">Download starts immediately. Ads never replace or block your download.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
         </div>}
