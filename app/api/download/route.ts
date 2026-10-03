@@ -254,6 +254,7 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
           audioFormat: "mp3",
           downloadMode: mode === "audio" ? "audio" : "auto",
           filenameStyle: "basic",
+          audioBitrate: "128",
           youtubeVideoCodec: "h264",
           youtubeVideoContainer: "mp4"
         })
@@ -269,7 +270,14 @@ async function callProvider(raw: string, base: string, apiKey?: string, mode: "v
       }
 
       const data = await response.json();
-      if (data?.status === "error") throw new Error(data?.error?.code || "Provider could not process this link.");
+      if (data?.status === "error") {
+        const code = typeof data?.error?.code === "string" ? data.error.code : "";
+        const service = typeof data?.error?.context?.service === "string" ? data.error.context.service : "";
+        const error = new Error(code || "Provider could not process this link.");
+        (error as any).providerCode = code;
+        (error as any).providerService = service;
+        throw error;
+      }
       const formats = normalizeFormats(data, mode);
       if (!formats.length) throw new Error("No downloadable format was returned.");
 
@@ -647,6 +655,15 @@ export async function POST(req: Request) {
     }
 
     if (!result) {
+      const normalizedProviderError = lastProviderError.toLowerCase();
+      if (platform === "Vimeo" && (normalizedProviderError.includes("error.api.fetch.fail") || normalizedProviderError.includes("vimeo"))) {
+        return NextResponse.json({
+          success: false,
+          platform,
+          error: "Vimeo downloads are temporarily unavailable because the connected Vimeo extractor is failing upstream. Please try another public platform for now."
+        }, { status: 503 });
+      }
+
       return NextResponse.json({
         success: false,
         platform,
