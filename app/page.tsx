@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { gatedDownload } from "@/lib/ad-gate";
 
 const platforms = [
   { name: "YouTube", url: "https://www.youtube.com/", paused: true },
@@ -164,18 +165,8 @@ export default function Home() {
 
   function chooseFormat(format: Format) {
     setSelectedFormat(format);
-
-    // The download button is a single-purpose action: it must start the
-    // requested file download and must never open a sponsor/ad destination.
-    // This keeps the mobile flow predictable and prevents accidental taps.
-    const downloadHref = format.url;
-    const download = document.createElement("a");
-    download.href = downloadHref;
-    download.rel = "noopener";
-    download.setAttribute("download", "");
-    document.body.appendChild(download);
-    download.click();
-    download.remove();
+    const gateKey = `${result?.platform || "source"}:${format.url}`;
+    gatedDownload(format.url, gateKey);
   }
 
   function copyVidzoraLink() {
@@ -267,7 +258,7 @@ export default function Home() {
                   <strong>{mediaType === "mp3" ? "MP3" : qualityName(f.label)}</strong>
                   <small>{mediaType === "mp3" ? "Best available audio" : f.label}</small>
                 </span>
-                <b>Download ↘</b>
+                <b>{selectedFormat?.url === f.url ? "Download ↘" : "Get Available ↘"}</b>
               </button>
             ))}
           </div>
