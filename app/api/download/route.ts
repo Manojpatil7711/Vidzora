@@ -380,7 +380,8 @@ async function callRedditFallback(raw: string) {
   if (u.hostname.toLowerCase() === "v.redd.it" && /\.(mp4|webm|mov|gif)(?:[?#]|$)/i.test(u.toString())) {
     return {
       formats: [{ label: "Video • Direct MP4", url: u.toString() }],
-      title: "Reddit video"
+      title: "Reddit video",
+      thumbnail: undefined
     };
   }
 
