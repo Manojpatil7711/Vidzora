@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+
+type Output = { blob: Blob; name: string };
 import ToolsAd from "../tools-ad";
 
 type K =
@@ -243,6 +245,7 @@ export default function ToolClient({ tool }: { tool: K }) {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [outputs, setOutputs] = useState<Output[]>([]);
   // Keep dimension fields as strings while typing. Converting with +value on
   // every keystroke turns an empty field into 0, which traps the first 0 and
   // makes inputs such as 0800 awkward to edit on mobile.
@@ -258,8 +261,9 @@ export default function ToolClient({ tool }: { tool: K }) {
     if (!files.length) return setMsg("Choose a file first.");
     setBusy(true);
     setMsg("");
+    setOutputs([]);
 
-    const outputs: { blob: Blob; name: string }[] = [];
+    const nextOutputs: Output[] = [];
 
     try {
       if (tool === "image-compressor" || tool === "image-size-reducer") {
@@ -272,7 +276,7 @@ export default function ToolClient({ tool }: { tool: K }) {
         }
 
         const result = await compressToTargetSize(i, targetBytes, setMsg);
-        outputs.push({
+        nextOutputs.push({
           blob: result.blob,
           name: "vidzora-compressed.webp"
         });
@@ -284,26 +288,26 @@ export default function ToolClient({ tool }: { tool: K }) {
         const x = safe.canvas;
         if (safe.scale < 1) setMsg("Large output was safely scaled to fit this device's memory."); 
         x.getContext("2d")!.drawImage(i, 0, 0, x.width, x.height);
-        outputs.push({
+        nextOutputs.push({
           blob: await blob(x, files[0].type === "image/png" ? "image/png" : "image/jpeg", .9),
           name: "vidzora-resized." + (files[0].type === "image/png" ? "png" : "jpg")
         });
       } else if (tool === "jpg-to-pdf") {
-        outputs.push({ blob: await imagesToPdf(files), name: "vidzora-images.pdf" });
+        nextOutputs.push({ blob: await imagesToPdf(files), name: "vidzora-images.pdf" });
       } else if (tool === "merge-pdf") {
-        outputs.push({ blob: await mergePdfs(files), name: "vidzora-merged.pdf" });
+        nextOutputs.push({ blob: await mergePdfs(files), name: "vidzora-merged.pdf" });
       } else if (tool === "pdf-to-jpg") {
         const pages = await renderPdf(files[0], (n) => setMsg("Rendering page " + n + "…"));
-        pages.forEach((p) => outputs.push({ blob: p.blob, name: "vidzora-page-" + p.page + ".jpg" }));
+        pages.forEach((p) => nextOutputs.push({ blob: p.blob, name: "vidzora-page-" + p.page + ".jpg" }));
       } else if (tool === "compress-pdf") {
         const pages = await renderPdf(files[0], (n) => setMsg("Compressing page " + n + "…"));
         const jpgFiles = pages.map((p, i) => new File([p.blob], "page-" + (i + 1) + ".jpg", { type: "image/jpeg" }));
         const out = await imagesToPdf(jpgFiles);
         if (out.size >= files[0].size) {
-          outputs.push({ blob: files[0], name: "vidzora-original.pdf" });
+          nextOutputs.push({ blob: files[0], name: "vidzora-original.pdf" });
           setMsg("Rebuild did not reduce the size, so the original PDF was kept.");
         } else {
-          outputs.push({ blob: out, name: "vidzora-compressed.pdf" });
+          nextOutputs.push({ blob: out, name: "vidzora-compressed.pdf" });
         }
       } else if (tool === "image-converter") {
         const i = await read(files[0]);
@@ -311,7 +315,7 @@ export default function ToolClient({ tool }: { tool: K }) {
         const x = safe.canvas;
         if (safe.scale < 1) setMsg("Large image was safely downscaled to avoid low-memory errors.");
         x.getContext("2d")!.drawImage(i, 0, 0, x.width, x.height);
-        outputs.push({
+        nextOutputs.push({
           blob: await blob(x, fmt, .92),
           name: "vidzora-converted." + fmt.split("/")[1].replace("jpeg", "jpg")
         });
@@ -325,12 +329,12 @@ export default function ToolClient({ tool }: { tool: K }) {
         const z = safeCrop.canvas;
         z.getContext("2d")!.drawImage(i, x, y, ww, hh, 0, 0, safeCrop.width, safeCrop.height);
         if (safeCrop.scale < 1) setMsg("Large crop was safely scaled to avoid low-memory errors.");
-        outputs.push({ blob: await blob(z, "image/png"), name: "vidzora-crop.png" });
+        nextOutputs.push({ blob: await blob(z, "image/png"), name: "vidzora-crop.png" });
       }
 
-      if (outputs.length) {
-        outputs.forEach((item) => dl(item.blob, item.name));
-        if (!msg) setMsg("Done — your file is ready.");
+      if (nextOutputs.length) {
+        setOutputs(nextOutputs);
+        setMsg(nextOutputs.length > 1 ? "Ready — choose which page to download." : "Done — your file is ready.");
       }
     } catch (e: any) {
       const name = String(e?.name || "");
@@ -428,7 +432,7 @@ export default function ToolClient({ tool }: { tool: K }) {
           <label>Height<input type="number" value={crop.h} onChange={e => setCrop({ ...crop, h: +e.target.value })} /></label>
         </div>}
         <button className="toolRun" disabled={busy} onClick={startGenerate}>{busy ? "Preparing file…" : "Generate"}</button>
-        {msg && <div className="toolMessage">{msg}</div>}
+        {outputs.length > 0 && <div className="toolOutputs" aria-label="Generated files">\n          {outputs.map((item) => <button key={item.name} type="button" className="toolMessage" onClick={() => dl(item.blob, item.name)}>⬇ {item.name}</button>)}\n        </div>}\n        {msg && <div className="toolMessage">{msg}</div>}
       </div>
       <div className="toolTrust"><b>✓ Simple</b><b>✓ Mobile friendly</b><b>✓ No account</b></div>
       <div className="toolPageAd"><ToolsAd variant="rectangle" /></div>
