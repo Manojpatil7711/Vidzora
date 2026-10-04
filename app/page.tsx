@@ -280,7 +280,7 @@ export default function Home() {
           <a href="/tools/image-compressor"><strong>🗜️ Image Compressor</strong><span>Compress JPG, PNG & WebP</span></a>
           <a href="/tools/image-resizer"><strong>↔️ Image Resizer</strong><span>Resize images exactly</span></a>
           <a href="/tools/jpg-to-pdf"><strong>📄 JPG to PDF</strong><span>Turn images into PDF</span></a>
-          <a href="/tools/compress-pdf"><strong>📦 Compress PDF</strong><span>Reduce PDF file size</span></a>
+          <a href="/tools/pdf-compressor"><strong>📦 Compress PDF</strong><span>Reduce PDF file size</span></a>
         </div>
       </section>
 
