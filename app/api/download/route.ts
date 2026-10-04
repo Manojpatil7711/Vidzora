@@ -555,14 +555,6 @@ export async function POST(req: Request) {
     if (!platform) {
       return NextResponse.json({ success: false, error: "Unsupported link. Paste a public link from one of the 16 supported platforms." }, { status: 400 });
     }
-    if (platform === "YouTube") {
-      return NextResponse.json({
-        success: false,
-        platform,
-        error: "YouTube downloads are currently paused. Please use another supported public platform."
-      }, { status: 503 });
-    }
-
     const providers: Array<{ base: string; key?: string }> = [];
     const primaryBase = process.env.COBALT_API_URL?.trim() || "https://cobalt-production-45cd.up.railway.app/";
     const primaryKey = process.env.COBALT_API_KEY?.trim();
