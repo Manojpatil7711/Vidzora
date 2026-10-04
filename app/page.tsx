@@ -223,7 +223,6 @@ export default function Home() {
           ))}
         </div>
         <div className="heroAdRail"><AdUnit variant="rail" /></div>
-        <p className="microcopy">16 public media platforms detected by Vidzora. Actual download availability depends on the connected media engine and the source link. • Public links only • Use content you have permission to download.</p>
 
         {error && <div className="notice error">{error}</div>}
 
