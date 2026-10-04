@@ -646,6 +646,24 @@ export async function POST(req: Request) {
       }
     }
 
+    // Facebook can intermittently fail on a single Cobalt instance when Meta changes
+    // media delivery. Keep a small, bounded Facebook-only failover pool so the other
+    // platforms retain their existing provider order and behavior.
+    if (!result && platform === "Facebook") {
+      const facebookFallbacks = [
+        "https://cobalt-alpha.wolfy.love",
+        "https://nuko-c.meowing.de"
+      ];
+      for (const fallbackBase of facebookFallbacks) {
+        try {
+          result = await callProvider(raw, fallbackBase, undefined, mode, false, 12000);
+          if (result) break;
+        } catch (error: any) {
+          lastProviderError = error?.message || "Facebook fallback provider failed.";
+        }
+      }
+    }
+
     if (!result && platform === "Reddit" && mode === "audio") {
       try {
         result = await callRedditFallback(raw);
