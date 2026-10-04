@@ -374,7 +374,7 @@ export default function ToolClient({ tool }: { tool: K }) {
           <strong>{files.length ? files.length + " file(s) selected" : "Choose file" + (c.m ? "s" : "")}</strong>
           <span>Tap to browse or select from your device</span>
         </label>
-        {tool === "image-compressor" && <>
+        {(tool === "image-compressor" || tool === "image-size-reducer") && <>
           <div className="controls2">
             <label>Target size
               <input
