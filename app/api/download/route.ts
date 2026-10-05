@@ -509,6 +509,72 @@ async function callRedditFallback(raw: string) {
   };
 }
 
+async function callFacebookHtmlFallback(raw: string) {
+  const sourceUrls = [
+    raw.replace(/^https:\/\/www\.facebook\.com/i, "https://m.facebook.com"),
+    raw.replace(/^https:\/\/facebook\.com/i, "https://m.facebook.com"),
+    raw
+  ];
+
+  const decodeCandidate = (value: string) => {
+    let decoded = value
+      .replace(/\\u0025/gi, "%")
+      .replace(/\\u003A/gi, ":")
+      .replace(/\\u002F/gi, "/")
+      .replace(/\\u003D/gi, "=")
+      .replace(/\\u0026/gi, "&")
+      .replace(/\\u0022/gi, '"')
+      .replace(/\\\//g, "/")
+      .replace(/&amp;/gi, "&");
+    try { decoded = JSON.parse('"'+decoded.replace(/"/g, '\\"')+'"'); } catch {}
+    return decoded;
+  };
+
+  for (const sourceUrl of [...new Set(sourceUrls)]) {
+    try {
+      const response = await fetchWithTimeout(sourceUrl, {
+        redirect: "follow",
+        headers: {
+          accept: "text/html,application/xhtml+xml",
+          "accept-language": "en-US,en;q=0.9",
+          "user-agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/154.0.0.0 Mobile Safari/537.36"
+        }
+      }, 12000);
+
+      if (!response.ok) continue;
+      const html = await response.text();
+      const candidates = [
+        ...Array.from(html.matchAll(/"playable_url(?:_quality_hd)?":"([^"]+)"/gi), (m) => m[1]),
+        ...Array.from(html.matchAll(/"hd_src":"([^"]+)"/gi), (m) => m[1]),
+        ...Array.from(html.matchAll(/"sd_src":"([^"]+)"/gi), (m) => m[1]),
+        ...Array.from(html.matchAll(/"playable_url":"([^"]+)"/gi), (m) => m[1])
+      ];
+
+      const formats: Array<{ label: string; url: string }> = [];
+      const seen = new Set<string>();
+      for (const rawCandidate of candidates) {
+        const url = decodeCandidate(rawCandidate);
+        if (!/^https?:\/\//i.test(url) || !/(facebook|fbcdn|fbsbx)/i.test(url) || seen.has(url)) continue;
+        seen.add(url);
+        formats.push({
+          label: formats.length === 0 ? "Video • HD" : "Video • SD",
+          url
+        });
+      }
+
+      if (formats.length) {
+        return {
+          formats: formats.slice(0, 2),
+          title: "Facebook video",
+          thumbnail: undefined
+        };
+      }
+    } catch {}
+  }
+
+  throw new Error("FACEBOOK_HTML_FALLBACK_FAILED");
+}
+
 async function callTikTokFallback(raw: string) {
   const response = await fetchWithTimeout("https://www.tikwm.com/api/?url=" + encodeURIComponent(raw), {
     headers: { "user-agent": "Vidzora/1.0" }
@@ -642,17 +708,12 @@ export async function POST(req: Request) {
     // media delivery. Keep a small, bounded Facebook-only failover pool so the other
     // platforms retain their existing provider order and behavior.
     if (!result && platform === "Facebook") {
-      const facebookFallbacks = [
-        "https://cobalt-alpha.wolfy.love",
-        "https://nuko-c.meowing.de"
-      ];
-      for (const fallbackBase of facebookFallbacks) {
-        try {
-          result = await callProvider(raw, fallbackBase, undefined, mode, false, 12000);
-          if (result) break;
-        } catch (error: any) {
-          lastProviderError = error?.message || "Facebook fallback provider failed.";
-        }
+      // Last-mile fallback for public Facebook videos when Cobalt's Facebook
+      // extractor returns a transient 4xx after Meta changes its page format.
+      try {
+        result = await callFacebookHtmlFallback(raw);
+      } catch (error: any) {
+        lastProviderError = error?.message || "Facebook HTML fallback failed.";
       }
     }
 
