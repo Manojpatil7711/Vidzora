@@ -289,9 +289,8 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     if (!out.size) throw new Error("No audio track was produced.");
     download(out, "vidzora-audio.webm");
     setMessage(`Audio ready • ${formatBytes(out.size)}`);
-    await ctx.close();
-    audioContextRef.current = null;
     recorderRef.current = null;
+    await ctx.suspend();
   }
 
   async function run() {
