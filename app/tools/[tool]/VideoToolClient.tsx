@@ -137,6 +137,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
   const urlRef = useRef<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const cancelRef = useRef(false);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -154,6 +155,16 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     if (audioContextRef.current) void audioContextRef.current.close();
     recorderRef.current?.stop();
   }, []);
+
+  function cancelProcessing() {
+    cancelRef.current = true;
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+    videoRef.current?.pause();
+    setBusy(false);
+    setMessage("Processing cancelled.");
+    setProgress(0);
+  }
 
   function resetFile() {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -195,6 +206,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
 
   async function convertAndCompress() {
     if (!file || !videoRef.current) return;
+    cancelRef.current = false;
     const video = videoRef.current;
     if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
       throw new Error("Video conversion is not supported by this browser.");
@@ -229,6 +241,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     await video.play();
 
     const draw = () => {
+      if (cancelRef.current) return;
       if (!video.paused && !video.ended) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         setProgress(Math.min(99, Math.round((video.currentTime / Math.max(video.duration, 0.001)) * 100)));
@@ -237,7 +250,25 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     };
     draw();
 
-    await new Promise<void>(resolve => { video.onended = () => resolve(); });
+    await new Promise<void>((resolve, reject) => {
+      const done = () => { video.removeEventListener("ended", done); video.removeEventListener("error", fail); resolve(); };
+      const fail = () => { video.removeEventListener("ended", done); video.removeEventListener("error", fail); reject(new Error("Video playback failed during conversion.")); };
+      video.addEventListener("ended", done, { once: true });
+      video.addEventListener("error", fail, { once: true });
+      const check = () => {
+        if (cancelRef.current) { video.removeEventListener("ended", done); video.removeEventListener("error", fail); resolve(); return; }
+        if (!video.ended) requestAnimationFrame(check);
+      };
+      check();
+    });
+    if (cancelRef.current) {
+      if (recorder.state !== "inactive") recorder.stop();
+      await finished.catch(() => undefined);
+      stream.getTracks().forEach(track => track.stop());
+      canvas.width = 1; canvas.height = 1;
+      setBusy(false);
+      return;
+    }
     recorder.stop();
     await finished;
     video.pause();
@@ -245,6 +276,8 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     if (!out.size) throw new Error("No converted video was produced.");
     download(out, "vidzora-converted.webm");
     setProgress(100);
+    stream.getTracks().forEach(track => track.stop());
+    canvas.width = 1; canvas.height = 1;
     setMessage(`Ready • ${formatBytes(out.size)} • WebM`);
   }
 
@@ -396,6 +429,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
         </button>
 
         {busy && progress > 0 && <div className="toolMessage" role="status" aria-live="polite">Processing {progress}%</div>}
+        {busy && tool === "video-converter-compressor" && <button type="button" className="toolButton secondary" onClick={cancelProcessing}>Cancel</button>}
         {message && <div className="toolMessage" role="status">{message}</div>}
       </div>
 
