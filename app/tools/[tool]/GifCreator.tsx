@@ -171,5 +171,8 @@ export default function GifCreator(){
       </div>}
       <button className="again" onClick={reset} disabled={working}>Reset</button>
     </div>}
-  </div>
+    <div className="toolTrust"><b>✓ Browser-first</b><b>✓ No account</b><b>✓ No video upload</b></div>
+    <div className="toolPageAd"><ToolsAd variant="rectangle" /></div>
+    </section>
+  </main>
 }
