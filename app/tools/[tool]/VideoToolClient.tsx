@@ -352,6 +352,26 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     await ctx.suspend();
   }
 
+  async function refreshMetadata() {
+    if (!file || !videoRef.current) return;
+    const video = videoRef.current;
+    setMessage("Refreshing metadata…");
+    await new Promise<void>((resolve, reject) => {
+      const done = () => { cleanup(); resolve(); };
+      const fail = () => { cleanup(); reject(new Error("Could not refresh video metadata.")); };
+      const cleanup = () => {
+        video.removeEventListener("loadedmetadata", done);
+        video.removeEventListener("error", fail);
+      };
+      video.addEventListener("loadedmetadata", done, { once: true });
+      video.addEventListener("error", fail, { once: true });
+      try { video.load(); } catch { cleanup(); reject(new Error("Could not reload the video metadata.")); }
+    });
+    setDuration(video.duration);
+    setVideoInfo({ width: video.videoWidth, height: video.videoHeight, fps: 0 });
+    setMessage("Metadata refreshed successfully.");
+  }
+
   async function run() {
     if (!file) {
       setMessage("Choose a video first.");
@@ -374,7 +394,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
       } else if (tool === "video-converter-compressor") {
         await convertAndCompress();
       } else {
-        setMessage("Metadata is already shown below.");
+        await refreshMetadata();
       }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "The operation failed. Please try another video.");
