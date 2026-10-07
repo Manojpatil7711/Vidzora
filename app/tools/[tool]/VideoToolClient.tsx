@@ -10,7 +10,8 @@ type VideoTool =
   | "video-frame-extractor"
   | "video-thumbnail-extractor"
   | "video-metadata"
-  | "video-audio-extractor";
+  | "video-audio-extractor"
+  | "video-converter-compressor";
 
 const config: Record<VideoTool, {
   title: string;
@@ -35,6 +36,11 @@ const config: Record<VideoTool, {
   "video-audio-extractor": {
     title: "Video Audio Extractor",
     description: "Extract playable audio from a video in your browser without uploading the source.",
+    accept: "video/*",
+  },
+  "video-converter-compressor": {
+    title: "Video Converter & Compressor",
+    description: "Convert and reduce compatible videos to WebM locally in your browser.",
     accept: "video/*",
   },
 };
@@ -125,6 +131,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
   const [file, setFile] = useState<File | null>(null);
   const [time, setTime] = useState("0");
   const [format, setFormat] = useState<"image/jpeg" | "image/png">("image/jpeg");
+  const [videoQuality, setVideoQuality] = useState<"low" | "medium" | "high">("medium");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [duration, setDuration] = useState(0);
@@ -171,6 +178,58 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
       setFile(null);
       setMessage(e instanceof Error ? e.message : "Could not read the video.");
     }
+  }
+
+  async function convertAndCompress() {
+    if (!file || !videoRef.current) return;
+    const video = videoRef.current;
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+      throw new Error("Video conversion is not supported by this browser.");
+    }
+    const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find(m => MediaRecorder.isTypeSupported(m));
+    if (!mime) throw new Error("This browser cannot create WebM video.");
+
+    const maxSide = videoQuality === "low" ? 720 : videoQuality === "medium" ? 1080 : 1440;
+    const scale = Math.min(1, maxSide / Math.max(video.videoWidth || 1, video.videoHeight || 1));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(2, Math.round((video.videoWidth || 2) * scale / 2) * 2);
+    canvas.height = Math.max(2, Math.round((video.videoHeight || 2) * scale / 2) * 2);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is not supported on this device.");
+
+    const stream = canvas.captureStream(30);
+    const audio = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.();
+    if (audio) audio.getAudioTracks().forEach(track => stream.addTrack(track));
+
+    const chunks: BlobPart[] = [];
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: videoQuality === "low" ? 900_000 : videoQuality === "medium" ? 1_800_000 : 3_000_000 });
+    const finished = new Promise<void>((resolve, reject) => {
+      recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      recorder.onerror = () => reject(new Error("Video conversion failed."));
+      recorder.onstop = () => resolve();
+    });
+
+    await seek(video, 0);
+    recorder.start(250);
+    setMessage("Converting… keep this tab open.");
+    await video.play();
+
+    const draw = () => {
+      if (!video.paused && !video.ended) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        requestAnimationFrame(draw);
+      }
+    };
+    draw();
+
+    await new Promise<void>(resolve => { video.onended = () => resolve(); });
+    recorder.stop();
+    await finished;
+    video.pause();
+    const out = new Blob(chunks, { type: mime });
+    if (!out.size) throw new Error("No converted video was produced.");
+    download(out, "vidzora-converted.webm");
+    setMessage(`Ready • ${formatBytes(out.size)} • WebM`);
   }
 
   async function runFrame(downloadName: string) {
@@ -253,6 +312,8 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
         setMessage(`Thumbnail ready • ${result.width}×${result.height}`);
       } else if (tool === "video-audio-extractor") {
         await extractAudio();
+      } else if (tool === "video-converter-compressor") {
+        await convertAndCompress();
       } else {
         setMessage("Metadata is already shown below.");
       }
@@ -310,6 +371,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
         {tool === "video-thumbnail-extractor" && <div className="toolMessage">The thumbnail is captured from about one-third into the video. Use Frame Extractor when you need an exact timestamp.</div>}
 
         {tool === "video-audio-extractor" && <div className="toolMessage">Output is WebM/Opus and is created locally. The video plays once while audio is captured, so keep this tab open.</div>}
+        {tool === "video-converter-compressor" && <div className="videoControls"><label>Output quality<select value={videoQuality} onChange={e => setVideoQuality(e.target.value as "low" | "medium" | "high")}><option value="low">Low • smaller</option><option value="medium">Medium • balanced</option><option value="high">High • better quality</option></select></label></div>}
 
         <button className="toolRun" disabled={busy || !file} onClick={() => void run()}>
           {busy ? "Processing…" : tool === "video-metadata" ? "Refresh Metadata" : "Create & Download"}
