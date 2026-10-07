@@ -593,7 +593,7 @@ async function callDirectMediaFallback(raw: string, platform: string) {
     if (typeof value !== "string") return;
     let url = value.replace(/\\u0026/g, "&").replace(/\\u002F/g, "/").replace(/\\u003A/g, ":").replace(/&amp;/g, "&");
     try { url = JSON.parse('"' + url.replace(/"/g, '\\"') + '"'); } catch {}
-    if (!/^https?:\\/\\//i.test(url) || seen.has(url)) return;
+    if (!/^https?:\/\//i.test(url) || seen.has(url)) return;
     if (/\.(mpd|m3u8)(?:[?#]|$)/i.test(url)) return;
     seen.add(url);
     formats.push({ label, url });
