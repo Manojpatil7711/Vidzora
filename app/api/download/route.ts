@@ -600,20 +600,19 @@ async function callDirectMediaFallback(raw: string, platform: string) {
   };
 
   if (platform === "Streamable") {
-    for (const m of html.matchAll(/(?:property|name)=["'](?:og:video(?::secure_url)?|twitter:player:stream)["'][^>]+content=["']([^"']+)["']/gi)) {
-      add("Video • Direct", m[1]);
-    }
-    for (const m of html.matchAll(/https?:\\/\\/[^\\s"'<>]+/gi)) {
+    for (const m of html.matchAll(/https?:\/\/[^\s"'<>]+/gi)) {
       const candidate = m[0];
       if (/(?:streamable|streamablecdn)/i.test(candidate)) add("Video • Direct", candidate);
     }
   }
 
   if (platform === "Pinterest") {
-    for (const m of html.matchAll(/https?:\\/\\/[^\\s"'<>]+/gi)) {
+    for (const m of html.matchAll(/https?:\/\/[^\s"'<>]+/gi)) {
       const candidate = m[0];
-      if (/\\.mp4(?:[?#]|$)/i.test(candidate)) add("Video • Direct", candidate);
+      if (/\.mp4(?:[?#]|$)/i.test(candidate)) add("Video • Direct", candidate);
     }
+  }
+
   if (formats.length) {
     return { formats: formats.slice(0, 5), title: platform + " video", thumbnail: undefined };
   }
