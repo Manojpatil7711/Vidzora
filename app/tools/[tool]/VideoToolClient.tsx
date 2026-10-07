@@ -202,7 +202,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     if (audio) audio.getAudioTracks().forEach(track => stream.addTrack(track));
 
     const chunks: BlobPart[] = [];
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: videoQuality === "low" ? 900_000 : videoQuality === "medium" ? 1_800_000 : 3_000_000 });
+    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: videoQuality === "low" ? 900_000 : videoQuality === "medium" ? 1_800_000 : 3_000_000 });
     const finished = new Promise<void>((resolve, reject) => {
       recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
       recorder.onerror = () => reject(new Error("Video conversion failed."));
