@@ -116,8 +116,10 @@ export default function GifCreator(){
       }
       setStatus("Finalizing GIF…");
       gif.finish();
-      const bytes=gif.bytes();
-      const blob=new Blob([bytes],{type:"image/gif"});
+      const sourceBytes=gif.bytes();
+      const bytes=new Uint8Array(sourceBytes.byteLength);
+      bytes.set(sourceBytes);
+      const blob=new Blob([bytes.buffer],{type:"image/gif"});
       const url=URL.createObjectURL(blob);
       setOutput(url);setOutputSize(blob.size);
       setStatus("GIF ready • "+total+" frames • "+formatBytes(blob.size));
