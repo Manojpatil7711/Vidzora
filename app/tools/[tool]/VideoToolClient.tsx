@@ -93,11 +93,16 @@ function readVideo(file: File, video: HTMLVideoElement, onReady: () => void) {
 function seek(video: HTMLVideoElement, time: number) {
   return new Promise<void>((resolve, reject) => {
     const clean = () => {
+      window.clearTimeout(timer);
       video.removeEventListener("seeked", done);
       video.removeEventListener("error", fail);
     };
     const done = () => { clean(); resolve(); };
     const fail = () => { clean(); reject(new Error("The selected frame could not be decoded.")); };
+    const timer = window.setTimeout(() => {
+      clean();
+      reject(new Error("Video seeking timed out. Try another video or a shorter clip."));
+    }, 5000);
     video.addEventListener("seeked", done, { once: true });
     video.addEventListener("error", fail, { once: true });
     video.currentTime = time;
@@ -253,9 +258,10 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     }
 
     const AudioCtx = window.AudioContext;
-    const ctx = new AudioCtx();
+    const ctx = audioContextRef.current || new AudioCtx();
     audioContextRef.current = ctx;
-    const source = ctx.createMediaElementSource(video);
+    const source = audioSourceRef.current || ctx.createMediaElementSource(video);
+    audioSourceRef.current = source;
     const destination = ctx.createMediaStreamDestination();
     source.connect(destination);
     source.connect(ctx.destination);
