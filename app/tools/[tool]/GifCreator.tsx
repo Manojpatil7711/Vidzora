@@ -24,6 +24,8 @@ export default function GifCreator(){
   const [duration,setDuration]=useState(0);
   const [start,setStart]=useState(0);
   const [end,setEnd]=useState(0);
+  const [startInput,setStartInput]=useState("0");
+  const [endInput,setEndInput]=useState("0");
   const [fps,setFps]=useState(10);
   const [width,setWidth]=useState(480);
   const [colors,setColors]=useState(128);
@@ -61,7 +63,8 @@ export default function GifCreator(){
     const v=videoRef.current;if(!v)return;
     const d=Number.isFinite(v.duration)?v.duration:0;
     if(!d){setError("This video does not expose a finite duration in this browser.");return}
-    setDuration(d);setStart(0);setEnd(Math.min(d,MAX_SECONDS));
+    const initialEnd=Math.min(d,MAX_SECONDS);
+    setDuration(d);setStart(0);setEnd(initialEnd);setStartInput("0");setEndInput(initialEnd.toFixed(1));
     setStatus(d>MAX_SECONDS?"Source is "+d.toFixed(1)+"s. GIF is limited to "+MAX_SECONDS+"s for mobile-safe processing.":"Video ready. Set the range and export.");
   }
 
@@ -136,7 +139,7 @@ export default function GifCreator(){
   }
 
   function reset(){
-    setFile(null);setSrc("");setDuration(0);setStart(0);setEnd(0);setProgress(0);setStatus("");setError("");
+    setFile(null);setSrc("");setDuration(0);setStart(0);setEnd(0);setStartInput("0");setEndInput("0");setProgress(0);setStatus("");setError("");
     if(objectUrlRef.current)URL.revokeObjectURL(objectUrlRef.current);objectUrlRef.current="";
     if(output)URL.revokeObjectURL(output);setOutput("");setOutputSize(0);
   }
@@ -153,8 +156,8 @@ export default function GifCreator(){
     {file&&duration>0&&<div className="gifEditor">
       <div className="gifRangeHeader"><strong>Clip range</strong><span>{start.toFixed(1)}s → {end.toFixed(1)}s • {range.toFixed(1)}s</span></div>
       <div className="controls2 gifControls">
-        <label>Start (sec)<input type="number" min="0" max={duration} step="0.1" value={start} disabled={working} onChange={e=>clampRange(Number(e.target.value),end)}/></label>
-        <label>End (sec)<input type="number" min="0.1" max={duration} step="0.1" value={end} disabled={working} onChange={e=>clampRange(start,Number(e.target.value))}/></label>
+        <label>Start (sec)<input type="number" min="0" max={duration} step="0.1" value={startInput} disabled={working} onChange={e=>{const raw=e.target.value;setStartInput(raw);if(raw!==""){const n=Number(raw);if(Number.isFinite(n))clampRange(n,end)}}} onBlur={()=>{if(startInput===""){setStartInput(start.toFixed(1));return}setStartInput(start.toFixed(1))}}/></label>
+        <label>End (sec)<input type="number" min="0.1" max={duration} step="0.1" value={endInput} disabled={working} onChange={e=>{const raw=e.target.value;setEndInput(raw);if(raw!==""){const n=Number(raw);if(Number.isFinite(n))clampRange(start,n)}}} onBlur={()=>{if(endInput===""){setEndInput(end.toFixed(1));return}setEndInput(end.toFixed(1))}}/></label>
         <label>FPS<select value={fps} disabled={working} onChange={e=>setFps(Number(e.target.value))}>{[5,8,10,12,15].map(x=><option key={x} value={x}>{x} FPS</option>)}</select></label>
         <label>Width<select value={width} disabled={working} onChange={e=>setWidth(Number(e.target.value))}>{[240,360,480,600,720].map(x=><option key={x} value={x}>{x}px</option>)}</select></label>
       </div>
