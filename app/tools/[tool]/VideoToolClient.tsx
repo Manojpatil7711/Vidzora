@@ -147,6 +147,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
   const [message, setMessage] = useState("");
   const [duration, setDuration] = useState(0);
   const [videoInfo, setVideoInfo] = useState({ width: 0, height: 0, fps: 0 });
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => () => {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -161,6 +162,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     setDuration(0);
     setVideoInfo({ width: 0, height: 0, fps: 0 });
     setMessage("");
+    setProgress(0);
     if (videoRef.current) videoRef.current.removeAttribute("src");
   }
 
@@ -223,11 +225,13 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     await seek(video, 0);
     recorder.start(250);
     setMessage("Converting… keep this tab open.");
+    setProgress(1);
     await video.play();
 
     const draw = () => {
       if (!video.paused && !video.ended) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        setProgress(Math.min(99, Math.round((video.currentTime / Math.max(video.duration, 0.001)) * 100)));
         requestAnimationFrame(draw);
       }
     };
@@ -240,6 +244,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     const out = new Blob(chunks, { type: mime });
     if (!out.size) throw new Error("No converted video was produced.");
     download(out, "vidzora-converted.webm");
+    setProgress(100);
     setMessage(`Ready • ${formatBytes(out.size)} • WebM`);
   }
 
@@ -312,6 +317,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     }
     setBusy(true);
     setMessage("");
+    setProgress(0);
     try {
       if (tool === "video-frame-extractor") {
         await runFrame(`vidzora-frame.${format === "image/png" ? "png" : "jpg"}`);
@@ -389,6 +395,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
           {busy ? "Processing…" : tool === "video-metadata" ? "Refresh Metadata" : "Create & Download"}
         </button>
 
+        {busy && progress > 0 && <div className="toolMessage" role="status" aria-live="polite">Processing {progress}%</div>}
         {message && <div className="toolMessage" role="status">{message}</div>}
       </div>
 
