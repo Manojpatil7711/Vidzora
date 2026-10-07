@@ -648,9 +648,9 @@ async function callDirectMediaFallback(raw: string, platform: string) {
 }
 
 async function callVimeoDirectFallback(raw: string) {
-  const match = new URL(raw).pathname.match(/\\/(?:video\\/)?(\\d+)/);
-  if (!match?.[1]) throw new Error("VIMEO_ID_MISSING");
-  const id = match[1];
+  const pathParts = new URL(raw).pathname.split("/").filter(Boolean);
+  const id = pathParts[pathParts.length - 1] || "";
+  if (!/^\d+$/.test(id)) throw new Error("VIMEO_ID_MISSING");
 
   const configUrls = [
     `https://player.vimeo.com/video/${id}/config`,
