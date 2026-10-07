@@ -42,7 +42,7 @@ export default async function Page({params}:P){
   const isSubtitleTool = tool === "subtitle-converter";
   const isGifTool = tool === "video-gif-creator";
   return <>
-    {isGifTool ? <GifCreator tool="video-gif-creator" /> : isSubtitleTool ? <SubtitleToolClient /> : isVideoTool ? <VideoToolClient tool={tool as "video-frame-extractor" | "video-thumbnail-extractor" | "video-metadata" | "video-audio-extractor" | "video-converter-compressor"} /> : <ToolClient tool={tool as any}/>}
+    {isGifTool ? <GifCreator /> : isSubtitleTool ? <SubtitleToolClient /> : isVideoTool ? <VideoToolClient tool={tool as "video-frame-extractor" | "video-thumbnail-extractor" | "video-metadata" | "video-audio-extractor" | "video-converter-compressor"} /> : <ToolClient tool={tool as any}/>}
     <section className="section" aria-labelledby="tool-info-title">
       <div>
         <div className="eyebrow">Vidzora TOOL GUIDE</div>
