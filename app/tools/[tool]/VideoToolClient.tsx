@@ -135,7 +135,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [duration, setDuration] = useState(0);
-  const [videoInfo, setVideoInfo] = useState({ width: 0, height: 0 });
+  const [videoInfo, setVideoInfo] = useState({ width: 0, height: 0, fps: 0 });
 
   useEffect(() => () => {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -148,7 +148,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     urlRef.current = null;
     setFile(null);
     setDuration(0);
-    setVideoInfo({ width: 0, height: 0 });
+    setVideoInfo({ width: 0, height: 0, fps: 0 });
     setMessage("");
     if (videoRef.current) videoRef.current.removeAttribute("src");
   }
@@ -170,7 +170,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     try {
       await readVideo(next, video, () => {
         setDuration(video.duration);
-        setVideoInfo({ width: video.videoWidth, height: video.videoHeight });
+        setVideoInfo({ width: video.videoWidth, height: video.videoHeight, fps: 0 });
         setTime("0");
       });
       urlRef.current = video.dataset.objectUrl || null;
@@ -329,6 +329,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     ["Size", formatBytes(file.size)],
     ["Duration", formatDuration(duration)],
     ["Dimensions", videoInfo.width ? `${videoInfo.width} × ${videoInfo.height}` : "—"],
+    ["Frame rate", videoInfo.fps ? `${videoInfo.fps} fps` : "Not exposed by browser"],
     ["MIME", file.type || "—"],
   ] : [];
 
