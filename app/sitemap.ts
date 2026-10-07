@@ -12,7 +12,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "compress-pdf",
     "merge-pdf",
     "image-converter",
-    "image-cropper"
+    "image-cropper",
+    "video-frame-extractor",
+    "video-thumbnail-extractor",
+    "video-metadata",
+    "video-audio-extractor",
+    "video-converter-compressor",
+    "video-gif-creator",
+    "subtitle-converter"
   ];
 
   return [
