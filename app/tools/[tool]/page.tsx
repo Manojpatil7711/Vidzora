@@ -21,7 +21,7 @@ export function generateStaticParams(){return Object.keys(data).map(tool=>({tool
 
 export async function generateMetadata({params}:P):Promise<Metadata>{
   const{tool}=await params,d=data[tool as keyof typeof data];
-  return d?{title:d[0],description:d[1],alternates:{canonical:"/tools/"+tool}}:{}
+  return d?{title:d[0],description:d[1],alternates:{canonical:"/tools/"+tool},robots:{index:true,follow:true},openGraph:{title:d[0]+" | Vidzora",description:d[1],url:"/tools/"+tool,type:"website"},twitter:{card:"summary",title:d[0]+" | Vidzora",description:d[1]}}:{}
 }
 
 export default async function Page({params}:P){
