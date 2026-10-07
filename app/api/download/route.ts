@@ -648,117 +648,23 @@ async function callDirectMediaFallback(raw: string, platform: string) {
 }
 
 async function callVimeoDirectFallback(raw: string) {
-  const pathParts = new URL(raw).pathname.split("/").filter(Boolean);
-  const id = pathParts[pathParts.length - 1] || "";
-  if (!/^\d+$/.test(id)) throw new Error("VIMEO_ID_MISSING");
-
-  const configUrls = [
-    `https://player.vimeo.com/video/${id}/config`,
-    `https://player.vimeo.com/video/${id}/config?autoplay=1`
-  ];
-
-  let config: any = null;
-  let lastStatus = 0;
-
-  for (const configUrl of configUrls) {
-    try {
-      const response = await fetchWithTimeout(
-        configUrl,
-        {
-          headers: {
-            accept: "application/json,text/plain;q=0.9,*/*;q=0.8",
-            referer: "https://vimeo.com/",
-            "user-agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/154.0.0.0 Mobile Safari/537.36"
-          }
-        },
-        10000
-      );
-      lastStatus = response.status;
-      if (!response.ok) continue;
-      config = await response.json();
-      if (config) break;
-    } catch {}
-  }
-
-  // Vimeo can expose the same player configuration inside the public page
-  // when the standalone /config endpoint is unavailable to serverless IPs.
-  if (!config) {
-    try {
-      const pageResponse = await fetchWithTimeout(
-        raw,
-        {
-          headers: {
-            accept: "text/html,application/xhtml+xml",
-            referer: "https://vimeo.com/",
-            "user-agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/154.0.0.0 Mobile Safari/537.36"
-          }
-        },
-        12000
-      );
-      lastStatus = pageResponse.status;
-      if (pageResponse.ok) {
-        const html = await pageResponse.text();
-        const directMatches = Array.from(
-          html.matchAll(/https?:\\/\\/player\\.vimeo\\.com\\/progressive_redirect\\/[^"\\s<>\\\\]+/gi),
-          (m) => m[0].replace(/\\\\u0026/g, "&").replace(/\\\\\\//g, "/")
-        );
-
-        const directUrls = [...new Set(directMatches)].filter((url) => /^https?:\\/\\//i.test(url));
-        if (directUrls.length) {
-          return {
-            formats: directUrls.slice(0, 5).map((url, index) => ({
-              label: "Video • Direct " + (index + 1),
-              url
-            })),
-            title: "Vimeo video",
-            thumbnail: undefined
-          };
-        }
-
-        // Some Vimeo pages embed JSON containing progressive file records.
-        const progressiveUrlMatches = Array.from(
-          html.matchAll(/"url"\\s*:\\s*"(https?:\\/\\/[^"]+)"[^}]{0,800}"(?:quality|height)"\\s*:/gi),
-          (m) => m[1].replace(/\\\\u0026/g, "&").replace(/\\\\\\//g, "/")
-        ).filter((url) => /(?:vimeo|vimeocdn|progressive_redirect)/i.test(url));
-
-        if (progressiveUrlMatches.length) {
-          return {
-            formats: [...new Set(progressiveUrlMatches)].slice(0, 5).map((url, index) => ({
-              label: "Video • Direct " + (index + 1),
-              url
-            })),
-            title: "Vimeo video",
-            thumbnail: undefined
-          };
-        }
-      }
-    } catch {}
-  }
-
-  if (!config) throw new Error("VIMEO_CONFIG_FAILED_" + lastStatus);
-
-  const progressive = Array.isArray(config?.request?.files?.progressive)
-    ? config.request.files.progressive
-    : [];
-
-  const cdnGroups = [
-    config?.request?.files?.hls?.cdns,
-    config?.request?.files?.dash?.cdns
-  ].filter(Boolean);
-
-  const cdnProgressive: string[] = [];
-  for (const group of cdnGroups) {
-    for (const cdn of Object.values(group as Record<string, any>)) {
-      const avc = (cdn as any)?.avc_url;
-      if (typeof avc === "string") cdnProgressive.push(avc);
-      if (Array.isArray(avc)) {
-        for (const url of avc) if (typeof url === "string") cdnProgressive.push(url);
-      }
-    }
-  }
-
+  const match = new URL(raw).pathname.match(/\/(?:video\/)?(\d+)/);
+  if (!match?.[1]) throw new Error("VIMEO_ID_MISSING");
+  const id = match[1];
+  const configResponse = await fetchWithTimeout(
+    "https://player.vimeo.com/video/" + id + "/config",
+    { headers: { accept: "application/json", "user-agent": "Vidzora/1.0" } },
+    10000
+  );
+  if (!configResponse.ok) throw new Error("VIMEO_CONFIG_FAILED");
+  const config = await configResponse.json();
+  const progressive = Array.isArray(config?.request?.files?.progressive) ? config.request.files.progressive : [];
+  const cdns = config?.request?.files?.hls?.cdns || config?.request?.files?.dash?.cdns || {};
+  const cdnProgressive = Object.values(cdns)
+    .flatMap((cdn: any) => Array.isArray(cdn?.avc_url) ? cdn.avc_url : [])
+    .filter((url: unknown) => typeof url === "string");
   const formats = progressive
-    .filter((f: any) => f?.url && /^https?:\\/\\//i.test(f.url))
+    .filter((f: any) => f?.url && /^https?:\/\//i.test(f.url))
     .sort((a: any, b: any) => (Number(b?.height) || 0) - (Number(a?.height) || 0))
     .slice(0, 5)
     .map((f: any) => ({
@@ -767,10 +673,8 @@ async function callVimeoDirectFallback(raw: string) {
     }));
 
   if (!formats.length) {
-    for (const url of [...new Set(cdnProgressive)].slice(0, 5)) {
-      if (/^https?:\\/\\//i.test(url) && !/\\.(?:m3u8|mpd)(?:[?#]|$)/i.test(url)) {
-        formats.push({ label: "Video • Direct", url });
-      }
+    for (const url of cdnProgressive.slice(0, 5)) {
+      if (/^https?:\/\//i.test(url)) formats.push({ label: "Video • Direct", url });
     }
   }
 
