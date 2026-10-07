@@ -215,6 +215,17 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
     return formats;
   }
 
+  // Newer Cobalt versions may return local-processing instead of one URL.
+  // The tunnel array contains the server-owned downloadable outputs.
+  if (data?.status === "local-processing" && Array.isArray(data.tunnel)) {
+    data.tunnel.forEach((url: unknown, index: number) => {
+      if (mode === "audio") add("Audio • MP3", url);
+      else add("Video • " + (index + 1), url);
+    });
+    if (mode === "audio" && data?.audio?.url) add("Audio • MP3", data.audio.url);
+    if (formats.length) return formats;
+  }
+
   if (mode === "audio") {
     add("Audio • MP3", data?.url);
     add("Audio • MP3", data?.audio);
@@ -607,9 +618,26 @@ async function callDirectMediaFallback(raw: string, platform: string) {
   }
 
   if (platform === "Pinterest") {
-    for (const m of html.matchAll(/https?:\/\/[^\s"'<>]+/gi)) {
-      const candidate = m[0];
-      if (/\.mp4(?:[?#]|$)/i.test(candidate)) add("Video • Direct", candidate);
+    const normalizedHtml = html
+      .replace(/\\u0025/gi, "%")
+      .replace(/\\u003A/gi, ":")
+      .replace(/\\u002F/gi, "/")
+      .replace(/\\u003D/gi, "=")
+      .replace(/\\u0026/gi, "&")
+      .replace(/\\\//g, "/")
+      .replace(/&amp;/gi, "&");
+
+    for (const m of normalizedHtml.matchAll(/https?:\/\/[^\s"'<>]+/gi)) {
+      const candidate = m[0].replace(/[\\",]+$/g, "");
+      if (/\.(?:mp4|mov|webm)(?:[?#]|$)/i.test(candidate)) add("Video • Direct", candidate);
+    }
+
+    const fieldPatterns = [
+      /"(?:contentUrl|content_url|videoUrl|video_url)"\s*:\s*"([^"]+)"/gi,
+      /"(?:url|src)"\s*:\s*"([^"]+\.(?:mp4|mov|webm)(?:\\?[^"]*)?)"/gi
+    ];
+    for (const pattern of fieldPatterns) {
+      for (const m of normalizedHtml.matchAll(pattern)) add("Video • Direct", m[1]);
     }
   }
 
@@ -631,6 +659,10 @@ async function callVimeoDirectFallback(raw: string) {
   if (!configResponse.ok) throw new Error("VIMEO_CONFIG_FAILED");
   const config = await configResponse.json();
   const progressive = Array.isArray(config?.request?.files?.progressive) ? config.request.files.progressive : [];
+  const cdns = config?.request?.files?.hls?.cdns || config?.request?.files?.dash?.cdns || {};
+  const cdnProgressive = Object.values(cdns)
+    .flatMap((cdn: any) => Array.isArray(cdn?.avc_url) ? cdn.avc_url : [])
+    .filter((url: unknown) => typeof url === "string");
   const formats = progressive
     .filter((f: any) => f?.url && /^https?:\/\//i.test(f.url))
     .sort((a: any, b: any) => (Number(b?.height) || 0) - (Number(a?.height) || 0))
@@ -639,6 +671,13 @@ async function callVimeoDirectFallback(raw: string) {
       label: "Video • " + (f.quality || ((f.height || 0) + "p")),
       url: f.url
     }));
+
+  if (!formats.length) {
+    for (const url of cdnProgressive.slice(0, 5)) {
+      if (/^https?:\/\//i.test(url)) formats.push({ label: "Video • Direct", url });
+    }
+  }
+
   if (!formats.length) throw new Error("VIMEO_NO_PROGRESSIVE_MEDIA");
   return {
     formats,
