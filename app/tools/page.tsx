@@ -10,7 +10,11 @@ const tools=[
 ["compress-pdf","Compress PDF","Reduce PDF file size","📦"],
 ["merge-pdf","Merge PDF","Combine PDFs into one","🔗"],
 ["image-converter","JPG PNG WebP","Convert image formats","🔄"],
-["image-cropper","Image Cropper","Crop and download images","✂️"]
+["image-cropper","Image Cropper","Crop and download images","✂️"],
+["video-frame-extractor","Video Frame Extractor","Extract an exact frame from video","🎞️"],
+["video-thumbnail-extractor","Video Thumbnail Extractor","Create a video thumbnail locally","🖼️"],
+["video-metadata","Video Metadata Viewer","Inspect video file details locally","ℹ️"],
+["video-audio-extractor","Video Audio Extractor","Extract playable audio locally","🎧"]
 ] as const;
 
 export const metadata={
@@ -52,7 +56,7 @@ export default function Tools(){
 
     <section className="toolsInfo">
       <h2>Private by design</h2>
-      <p>Image tools process files in your browser. No account is required.</p>
+      <p>Image and video tools process files in your browser. No account is required. Video tools are currently browser-first and do not upload the source file.</p>
     </section>
 
     <footer>
