@@ -215,7 +215,9 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     if (!mime) throw new Error("This browser cannot create WebM video.");
 
     const maxSide = videoQuality === "low" ? 720 : videoQuality === "medium" ? 1080 : 1440;
-    const scale = Math.min(1, maxSide / Math.max(video.videoWidth || 1, video.videoHeight || 1));
+    const sourcePixels = Math.max(1, (video.videoWidth || 1) * (video.videoHeight || 1));
+    const mobilePixelCap = 8_000_000;
+    const scale = Math.min(1, maxSide / Math.max(video.videoWidth || 1, video.videoHeight || 1), Math.sqrt(mobilePixelCap / sourcePixels));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(2, Math.round((video.videoWidth || 2) * scale / 2) * 2);
     canvas.height = Math.max(2, Math.round((video.videoHeight || 2) * scale / 2) * 2);
@@ -238,7 +240,14 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
     recorder.start(250);
     setMessage("Converting… keep this tab open.");
     setProgress(1);
-    await video.play();
+    try {
+      await video.play();
+    } catch {
+      recorder.stop();
+      await finished.catch(() => undefined);
+      stream.getTracks().forEach(track => track.stop());
+      throw new Error("Video playback could not start. Tap play or try another video.");
+    }
 
     const draw = () => {
       if (cancelRef.current) return;
