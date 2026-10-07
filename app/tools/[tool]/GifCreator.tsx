@@ -97,8 +97,10 @@ export default function GifCreator(){
     setWorking(true);setStatus("Preparing GIF encoder…");
     try{
       const ratio=(v.videoWidth||1)/(v.videoHeight||1);
-      const outW=Math.max(64,Math.min(720,Math.round(width/2)*2));
-      const outH=Math.max(64,Math.min(720,Math.round(outW/ratio/2)*2));
+      const maxW=Math.min(width,720),maxH=720;
+      const scale=Math.min(maxW/(v.videoWidth||1),maxH/(v.videoHeight||1),1);
+      const outW=Math.max(64,Math.floor((v.videoWidth||1)*scale/2)*2);
+      const outH=Math.max(64,Math.floor((v.videoHeight||1)*scale/2)*2);
       const canvas=document.createElement("canvas");canvas.width=outW;canvas.height=outH;
       const ctx=canvas.getContext("2d",{willReadFrequently:true});
       if(!ctx)throw new Error("Canvas processing is unavailable in this browser.");
