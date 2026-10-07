@@ -36,7 +36,7 @@ export default async function Page({params}:P){
   const d=data[tool as keyof typeof data];
   const isVideoTool = tool.startsWith("video-");
   return <>
-    {isVideoTool ? <VideoToolClient tool={tool as "video-frame-extractor" | "video-thumbnail-extractor" | "video-metadata" | "video-audio-extractor"} /> : <ToolClient tool={tool as any}/>}
+    {isVideoTool ? <VideoToolClient tool={tool as "video-frame-extractor" | "video-thumbnail-extractor" | "video-metadata" | "video-audio-extractor" | "video-converter-compressor"} /> : <ToolClient tool={tool as any}/>}
     <section className="section" aria-labelledby="tool-info-title">
       <div>
         <div className="eyebrow">Vidzora TOOL GUIDE</div>
