@@ -4,6 +4,7 @@ import{notFound}from"next/navigation";
 import ToolClient from "./ToolClient";
 import VideoToolClient from "./VideoToolClient";
 import SubtitleToolClient from "./SubtitleToolClient";
+import GifCreator from "./GifCreator";
 
 const data={
   "video-frame-extractor":["Video Frame Extractor","Extract a frame from a video online.","Capture an exact video frame locally in your browser without uploading the source.","Choose a video, enter the timestamp, then create the JPG or PNG frame.","video-thumbnail-extractor","Create a thumbnail quickly from the video."],
@@ -12,6 +13,7 @@ const data={
   "video-audio-extractor":["Video Audio Extractor","Extract audio from a video online.","Capture playable WebM/Opus audio locally in your browser without uploading the video.","Choose a video and create the audio file. The video plays once during extraction.","video-metadata","Check the source video details first."],
   "video-converter-compressor":["Video Converter & Compressor","Convert and compress compatible videos to WebM online.","Convert compatible video formats to WebM and reduce output bitrate locally in your browser.","Choose a video, select quality, then let the browser create the WebM file.","video-frame-extractor","Extract a frame from the converted video when needed."],
   "subtitle-converter":["Subtitle Converter","Convert SRT and WebVTT subtitle files online.","Convert common subtitle formats locally in your browser without uploading the subtitle file.","Choose an SRT or VTT file, select the output format, then download it.","video-metadata","Inspect the related video file when needed."],
+  "video-gif-creator":["Video to GIF Creator","Create GIFs from videos online.","Trim a short video clip and encode an animated GIF locally in your browser with FPS, size, palette and loop controls.","Choose a video, set the clip range and output controls, then create and download the GIF.","video-frame-extractor","Extract a precise frame when you need a still image."],
   "image-compressor":["Image Compressor","Compress JPG, PNG and WebP images online for free.","Reduce image file size in your browser without uploading the file to a server.","Choose an image, adjust quality, then generate the compressed file.","image-resizer","Resize the image to exact width and height directly in your browser."],
   "image-size-reducer":["Image Size Reducer","Reduce an image to a target KB, MB or GB size online.","Set a target file size and Vidzora will optimize the image locally in your browser without uploading it.","Choose an image, enter the target size and unit, then generate the optimized file.","image-compressor","Use the general image compressor when you want a simple smaller-file workflow."],
   "image-resizer":["Image Resizer","Resize images online to exact dimensions.","Set an exact width and height for a JPG, PNG or WebP image before downloading it.","Choose an image, enter the dimensions, then generate the resized file.","image-compressor","Compress the resized image if you need a smaller file."],
@@ -38,8 +40,9 @@ export default async function Page({params}:P){
   const d=data[tool as keyof typeof data];
   const isVideoTool = tool.startsWith("video-");
   const isSubtitleTool = tool === "subtitle-converter";
+  const isGifTool = tool === "video-gif-creator";
   return <>
-    {isSubtitleTool ? <SubtitleToolClient /> : isVideoTool ? <VideoToolClient tool={tool as "video-frame-extractor" | "video-thumbnail-extractor" | "video-metadata" | "video-audio-extractor" | "video-converter-compressor"} /> : <ToolClient tool={tool as any}/>}
+    {isGifTool ? <GifCreator tool="video-gif-creator" /> : isSubtitleTool ? <SubtitleToolClient /> : isVideoTool ? <VideoToolClient tool={tool as "video-frame-extractor" | "video-thumbnail-extractor" | "video-metadata" | "video-audio-extractor" | "video-converter-compressor"} /> : <ToolClient tool={tool as any}/>}
     <section className="section" aria-labelledby="tool-info-title">
       <div>
         <div className="eyebrow">Vidzora TOOL GUIDE</div>
