@@ -137,7 +137,16 @@ export default function GifCreator(){
     if(output)URL.revokeObjectURL(output);setOutput("");setOutputSize(0);
   }
 
-  return <main className="toolsShell">\n    <header className="nav">\n      <a className="brand" href="/">Vidzora<span>•</span></a>\n      <nav><a href="/tools">All Tools</a><a className="toolsNavActive" href="/">Downloader</a></nav>\n    </header>\n    <section className="toolHero">\n      <div className="eyebrow">VIDZORA • VIDEO TOOLS</div>\n      <h1>Video to GIF Creator</h1>\n      <p>Create short animated GIFs locally in your browser. No account and no video upload.</p>\n      <div className="toolBox videoToolBox gifToolBox">
+  return <main className="toolsShell">
+    <header className="nav">
+      <a className="brand" href="/">Vidzora<span>•</span></a>
+      <nav><a href="/tools">All Tools</a><a className="toolsNavActive" href="/">Downloader</a></nav>
+    </header>
+    <section className="toolHero">
+      <div className="eyebrow">VIDZORA • VIDEO TOOLS</div>
+      <h1>Video to GIF Creator</h1>
+      <p>Create short animated GIFs locally in your browser. No account and no video upload.</p>
+      <div className="toolBox videoToolBox gifToolBox">
     <label className="dropZone videoDropZone" tabIndex={0}>
       <input type="file" accept="video/*" onChange={e=>choose(e.target.files?.[0]||null)} />
       <strong>{file?file.name:"Choose a video for GIF creation"}</strong>
