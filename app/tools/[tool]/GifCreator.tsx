@@ -9,8 +9,6 @@ const MAX_FILE=500*1024*1024;
 const MAX_SECONDS=12;
 const MAX_FRAMES=180;
 
-type Props={tool:"video-gif-creator"};
-
 function formatBytes(n:number){
   if(!Number.isFinite(n)||n<0)return "—";
   if(n<1024)return n+" B";
@@ -38,8 +36,10 @@ export default function GifCreator(){
   const [working,setWorking]=useState(false);
   const videoRef=useRef<HTMLVideoElement|null>(null);
   const objectUrlRef=useRef("");
+  const fileInputRef=useRef<HTMLInputElement|null>(null);
 
-  useEffect(()=>()=>{if(objectUrlRef.current)URL.revokeObjectURL(objectUrlRef.current);if(output)URL.revokeObjectURL(output)},[output]);
+  useEffect(()=>()=>{if(objectUrlRef.current)URL.revokeObjectURL(objectUrlRef.current)},[]);
+  useEffect(()=>()=>{if(output)URL.revokeObjectURL(output)},[output]);
 
   const range=useMemo(()=>Math.max(0,end-start),[start,end]);
   const frameCount=Math.max(1,Math.ceil(range*fps));
@@ -54,6 +54,7 @@ export default function GifCreator(){
     if(objectUrlRef.current)URL.revokeObjectURL(objectUrlRef.current);
     const url=URL.createObjectURL(next);objectUrlRef.current=url;
     setFile(next);setSrc(url);setProgress(0);
+    if(fileInputRef.current)fileInputRef.current.value="";
   }
 
   function onMeta(){
@@ -75,7 +76,8 @@ export default function GifCreator(){
     await new Promise<void>((resolve,reject)=>{
       const done=()=>{cleanup();resolve()};
       const fail=()=>{cleanup();reject(new Error("Could not seek to a video frame."))};
-      const cleanup=()=>{video.removeEventListener("seeked",done);video.removeEventListener("error",fail)};
+      const timer=window.setTimeout(()=>{cleanup();reject(new Error("Video seeking timed out. Try a shorter clip or another video."))},5000);
+      const cleanup=()=>{window.clearTimeout(timer);video.removeEventListener("seeked",done);video.removeEventListener("error",fail)};
       video.addEventListener("seeked",done,{once:true});video.addEventListener("error",fail,{once:true});
       video.currentTime=t;
     });
@@ -139,7 +141,7 @@ export default function GifCreator(){
 
   return <div className="toolBox videoToolBox gifToolBox">
     <label className="dropZone videoDropZone" tabIndex={0}>
-      <input type="file" accept="video/*" onChange={e=>choose(e.target.files?.[0]||null)} />
+      <input ref={fileInputRef} type="file" accept="video/*" onChange={e=>choose(e.target.files?.[0]||null)} />
       <strong>{file?file.name:"Choose a video for GIF creation"}</strong>
       <span>Browser-supported video • max 500 MB • processed locally</span>
     </label>
