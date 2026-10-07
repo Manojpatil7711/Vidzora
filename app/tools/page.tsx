@@ -14,7 +14,8 @@ const tools=[
 ["video-frame-extractor","Video Frame Extractor","Extract an exact frame from video","🎞️"],
 ["video-thumbnail-extractor","Video Thumbnail Extractor","Create a video thumbnail locally","🖼️"],
 ["video-metadata","Video Metadata Viewer","Inspect video file details locally","ℹ️"],
-["video-audio-extractor","Video Audio Extractor","Extract playable audio locally","🎧"]
+["video-audio-extractor","Video Audio Extractor","Extract playable audio locally","🎧"],
+["video-converter-compressor","Video Converter & Compressor","Convert and reduce video size locally","🎬"]
 ] as const;
 
 export const metadata={
