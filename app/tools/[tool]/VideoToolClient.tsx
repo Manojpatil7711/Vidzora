@@ -105,7 +105,12 @@ function seek(video: HTMLVideoElement, time: number) {
     }, 5000);
     video.addEventListener("seeked", done, { once: true });
     video.addEventListener("error", fail, { once: true });
-    video.currentTime = time;
+    try {
+      video.currentTime = time;
+    } catch {
+      clean();
+      reject(new Error("This video cannot seek to the selected position."));
+    }
   });
 }
 
