@@ -126,7 +126,7 @@ export default function VideoToolClient({ tool }: { tool: VideoTool }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const urlRef = useRef<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);\n  const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [time, setTime] = useState("0");
