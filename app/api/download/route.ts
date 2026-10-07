@@ -575,6 +575,82 @@ async function callFacebookHtmlFallback(raw: string) {
   throw new Error("FACEBOOK_HTML_FALLBACK_FAILED");
 }
 
+
+async function callDirectMediaFallback(raw: string, platform: string) {
+  const response = await fetchWithTimeout(raw, {
+    redirect: "follow",
+    headers: {
+      accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+      "accept-language": "en-US,en;q=0.9",
+      "user-agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/154.0.0.0 Mobile Safari/537.36"
+    }
+  }, 12000);
+  if (!response.ok) throw new Error(platform + "_PAGE_FETCH_FAILED");
+  const html = await response.text();
+  const formats: Array<{ label: string; url: string }> = [];
+  const seen = new Set<string>();
+  const add = (label: string, value: unknown) => {
+    if (typeof value !== "string") return;
+    let url = value.replace(/\\u0026/g, "&").replace(/\\u002F/g, "/").replace(/\\u003A/g, ":").replace(/&amp;/g, "&");
+    try { url = JSON.parse('"' + url.replace(/"/g, '\\"') + '"'); } catch {}
+    if (!/^https?:\\/\\//i.test(url) || seen.has(url)) return;
+    if (/\.(mpd|m3u8)(?:[?#]|$)/i.test(url)) return;
+    seen.add(url);
+    formats.push({ label, url });
+  };
+
+  if (platform === "Streamable") {
+    for (const m of html.matchAll(/(?:property|name)=["'](?:og:video(?::secure_url)?|twitter:player:stream)["'][^>]+content=["']([^"']+)["']/gi)) {
+      add("Video • Direct", m[1]);
+    }
+    for (const m of html.matchAll(/["'](?:url|src)["']\s*:\s*["'](https?:\\/\\/[^"']+(?:streamable|streamablecdn)[^"']+)["']/gi)) {
+      add("Video • Direct", m[1]);
+    }
+  }
+
+  if (platform === "Pinterest") {
+    for (const m of html.matchAll(/["']url["']\s*:\s*["'](https?:\\/\\/[^"']+\.(?:mp4|m3u8)[^"']*)["']/gi)) {
+      add("Video • Direct", m[1]);
+    }
+    for (const m of html.matchAll(/https?:\\\\?\/\\\\?\/[^"']+\.(?:mp4)(?:\\?[^"']*)?/gi)) {
+      add("Video • Direct", m[0]);
+    }
+  }
+
+  if (formats.length) {
+    return { formats: formats.slice(0, 5), title: platform + " video", thumbnail: undefined };
+  }
+  throw new Error(platform + "_DIRECT_FALLBACK_FAILED");
+}
+
+async function callVimeoDirectFallback(raw: string) {
+  const match = new URL(raw).pathname.match(/\/(?:video\/)?(\d+)/);
+  if (!match?.[1]) throw new Error("VIMEO_ID_MISSING");
+  const id = match[1];
+  const configResponse = await fetchWithTimeout(
+    "https://player.vimeo.com/video/" + id + "/config",
+    { headers: { accept: "application/json", "user-agent": "Vidzora/1.0" } },
+    10000
+  );
+  if (!configResponse.ok) throw new Error("VIMEO_CONFIG_FAILED");
+  const config = await configResponse.json();
+  const progressive = Array.isArray(config?.request?.files?.progressive) ? config.request.files.progressive : [];
+  const formats = progressive
+    .filter((f: any) => f?.url && /^https?:\/\//i.test(f.url))
+    .sort((a: any, b: any) => (Number(b?.height) || 0) - (Number(a?.height) || 0))
+    .slice(0, 5)
+    .map((f: any) => ({
+      label: "Video • " + (f.quality || ((f.height || 0) + "p")),
+      url: f.url
+    }));
+  if (!formats.length) throw new Error("VIMEO_NO_PROGRESSIVE_MEDIA");
+  return {
+    formats,
+    title: config?.video?.title || "Vimeo video",
+    thumbnail: config?.video?.thumbs?.base
+  };
+}
+
 async function callTikTokFallback(raw: string) {
   const response = await fetchWithTimeout("https://www.tikwm.com/api/?url=" + encodeURIComponent(raw), {
     headers: { "user-agent": "Vidzora/1.0" }
@@ -730,6 +806,25 @@ export async function POST(req: Request) {
         result = await callTikTokFallback(raw);
       } catch (error: any) {
         lastProviderError = error?.message || "TikTok provider failed.";
+      }
+    }
+
+    // Dedicated last-mile fallbacks for platforms whose upstream Cobalt
+    // extractor can intermittently fail. These are bounded and only run
+    // after the configured primary/secondary engines have failed.
+    if (!result && (platform === "Streamable" || platform === "Pinterest")) {
+      try {
+        result = await callDirectMediaFallback(raw, platform);
+      } catch (error: any) {
+        lastProviderError = error?.message || platform + " direct fallback failed.";
+      }
+    }
+
+    if (!result && platform === "Vimeo") {
+      try {
+        result = await callVimeoDirectFallback(raw);
+      } catch (error: any) {
+        lastProviderError = error?.message || "Vimeo direct fallback failed.";
       }
     }
 
