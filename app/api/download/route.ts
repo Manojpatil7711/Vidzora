@@ -207,9 +207,10 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
 
   if (data?.status === "picker" && Array.isArray(data.picker)) {
     data.picker.forEach((item: any, index: number) => {
+      // MP4 results must contain only actual video media. Instagram
+      // carousels can return photo/GIF items alongside videos; treating
+      // those URLs as video formats can make mobile browsers save .jpg.
       if (item?.type === "video") add("Video • Item " + (index + 1), item.url);
-      else if (item?.type === "photo") add("Photo • Item " + (index + 1), item.url);
-      else if (item?.type === "gif") add("GIF • Item " + (index + 1), item.url);
     });
     if (typeof data.audio === "string") add("Audio", data.audio);
     return formats;
