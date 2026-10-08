@@ -166,7 +166,7 @@ export default function Home() {
   function chooseFormat(format: Format) {
     setSelectedFormat(format);
     const gateKey = `${result?.platform || "source"}:${format.url}`;
-    gatedDownload(format.url, gateKey);
+    gatedDownload(format.url, gateKey, result?.platform === "Instagram" ? "vidzora-instagram-video.mp4" : undefined);
   }
 
   function copyVidzoraLink() {
