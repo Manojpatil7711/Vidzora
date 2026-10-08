@@ -201,6 +201,11 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
   const seen = new Set<string>();
   const add = (label: string, url: unknown) => {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url) || seen.has(url)) return;
+    const lowerUrl = url.toLowerCase();
+    // Defense-in-depth: never expose an obvious image asset as a video.
+    // Some providers can mislabel a thumbnail/photo URL as video media.
+    const isImageAsset = /\.(?:jpe?g|png|webp|avif|gif)(?:[?#]|$)/i.test(lowerUrl);
+    if (mode === "video" && isImageAsset) return;
     seen.add(url);
     formats.push({ label, url });
   };
