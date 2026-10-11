@@ -17,6 +17,17 @@ type TrendItem = {
   traffic: string | null;
 };
 
+type YouTubeMetricResult = {
+  configured?: boolean;
+  message?: string;
+  error?: string;
+  hint?: string;
+  approximateTotalResults?: number | null;
+  days?: number;
+  videos?: Array<{ id: string; title: string; channel: string; publishedAt: string | null; url: string; views: number | null }>;
+  caveat?: string;
+};
+
 type FeedResponse = {
   items: TrendItem[];
   meta: {
@@ -86,7 +97,7 @@ export default function TrendRadarPage() {
   const [interestInput, setInterestInput] = useState("");
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [selected, setSelected] = useState<TrendItem | null>(null);
-  const [alertsEnabled, setAlertsEnabled] = useState(false);
+  const [alertsEnabled, setAlertsEnabled] = useState(false);\n  const [youtubeMetrics, setYoutubeMetrics] = useState<Record<string, YouTubeMetricResult>>({});\n  const [youtubeLoadingId, setYoutubeLoadingId] = useState("");
   const firstLoad = useRef(true);
   const knownIds = useRef<Set<string>>(new Set());
 
@@ -166,6 +177,21 @@ export default function TrendRadarPage() {
 
   function toggleSaved(item: TrendItem) {
     setSavedIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id]);
+  }
+
+  async function checkYouTube(item: TrendItem) {
+    setYoutubeLoadingId(item.id);
+    try {
+      const params = new URLSearchParams({ q: item.title, country, language, days: "30" });
+      const response = await fetch(`/api/trend-radar/youtube?${params.toString()}`, { cache: "no-store" });
+      const data = await response.json() as YouTubeMetricResult;
+      setYoutubeMetrics((current) => ({ ...current, [item.id]: data }));
+      if (!response.ok) setError(data.error || "YouTube activity could not be loaded.");
+    } catch {
+      setError("YouTube activity could not be loaded. Try the direct platform search instead.");
+    } finally {
+      setYoutubeLoadingId("");
+    }
   }
 
   async function enableAlerts() {
@@ -282,10 +308,17 @@ export default function TrendRadarPage() {
                     <div className={styles.topicActions} style={{ marginTop: 10 }}>
                       <a className={styles.smallBtn} href={item.url} target="_blank" rel="noreferrer">Open source ↗</a>
                       <a className={styles.smallBtn} href={`https://www.youtube.com/results?search_query=${encodeURIComponent(item.title)}`} target="_blank" rel="noreferrer">Check YouTube ↗</a>
-                      <a className={styles.smallBtn} href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(item.title)}`} target="_blank" rel="noreferrer">Check Instagram ↗</a>
+                      <a className={styles.smallBtn} href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(item.title)}`} target="_blank" rel="noreferrer">Check Instagram ↗</a>\n                      <button type="button" className={styles.smallBtn} onClick={() => void checkYouTube(item)} disabled={youtubeLoadingId === item.id}>{youtubeLoadingId === item.id ? "Checking YouTube…" : "YouTube activity"}</button>
                       <button type="button" className={styles.smallBtn} onClick={() => setSelected(item)}>Generate ideas</button>
                       <button type="button" className={`${styles.smallBtn} ${savedIds.includes(item.id) ? styles.smallBtnSaved : ""}`} onClick={() => toggleSaved(item)}>{savedIds.includes(item.id) ? "★ Saved" : "☆ Save"}</button>
                     </div>
+                    {youtubeMetrics[item.id] && <div className={styles.metricPanel}>
+                      {youtubeMetrics[item.id].configured === false ? <><strong>YouTube metrics not connected</strong><p>{youtubeMetrics[item.id].message}</p></> : youtubeMetrics[item.id].error ? <><strong>YouTube lookup unavailable</strong><p>{youtubeMetrics[item.id].error} {youtubeMetrics[item.id].hint}</p></> : <>
+                        <strong>{youtubeMetrics[item.id].approximateTotalResults == null ? "Search estimate unavailable" : `About ${youtubeMetrics[item.id].approximateTotalResults.toLocaleString()} matching results`}</strong>
+                        <p>API-reported search estimate · last {youtubeMetrics[item.id].days ?? 30} days. This is not an exact count of all YouTube videos.</p>
+                        {(youtubeMetrics[item.id].videos || []).map((video) => <div className={styles.metricVideo} key={video.id}><a href={video.url} target="_blank" rel="noreferrer">{video.title}</a><span>{video.channel} · {video.views == null ? "Views unavailable" : `${video.views.toLocaleString()} views`}</span></div>)}
+                      </>}
+                    </div>}
                   </div>
                 </article>
               ))}
