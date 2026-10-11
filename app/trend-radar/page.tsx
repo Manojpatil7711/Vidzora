@@ -317,7 +317,7 @@ export default function TrendRadarPage() {
                     </div>
                     {youtubeMetrics[item.id] && <div className={styles.metricPanel}>
                       {youtubeMetrics[item.id].configured === false ? <><strong>YouTube metrics not connected</strong><p>{youtubeMetrics[item.id].message}</p></> : youtubeMetrics[item.id].error ? <><strong>YouTube lookup unavailable</strong><p>{youtubeMetrics[item.id].error} {youtubeMetrics[item.id].hint}</p></> : <>
-                        <strong>{youtubeMetrics[item.id].approximateTotalResults == null ? "Search estimate unavailable" : `About ${youtubeMetrics[item.id].approximateTotalResults.toLocaleString()} matching results`}</strong>
+                        <strong>{youtubeMetrics[item.id].approximateTotalResults == null ? "Search estimate unavailable" : `About ${Number(youtubeMetrics[item.id].approximateTotalResults ?? 0).toLocaleString()} matching results`}</strong>
                         <p>API-reported search estimate · last {youtubeMetrics[item.id].days ?? 30} days. This is not an exact count of all YouTube videos.</p>
                         {(youtubeMetrics[item.id].videos || []).map((video) => <div className={styles.metricVideo} key={video.id}><a href={video.url} target="_blank" rel="noreferrer">{video.title}</a><span>{video.channel} · {video.views == null ? "Views unavailable" : `${video.views.toLocaleString()} views`}</span></div>)}
                       </>}
