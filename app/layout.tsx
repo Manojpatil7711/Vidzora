@@ -10,12 +10,11 @@ export const metadata: Metadata = {
     template: "%s | Vidzora"
   },
   description:
-    "Vidzora is a fast, mobile-friendly downloader for publicly accessible videos from YouTube, Instagram, Facebook, TikTok and other supported platforms.",
+    "Vidzora is a fast, mobile-friendly downloader for publicly accessible videos from supported social platforms. YouTube downloads are currently paused, and availability varies by platform.",
   keywords: [
     "video downloader",
     "social video downloader",
     "online video downloader",
-    "YouTube video downloader",
     "Instagram video downloader",
     "Facebook video downloader",
     "TikTok video downloader",
