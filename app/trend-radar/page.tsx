@@ -97,7 +97,9 @@ export default function TrendRadarPage() {
   const [interestInput, setInterestInput] = useState("");
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [selected, setSelected] = useState<TrendItem | null>(null);
-  const [alertsEnabled, setAlertsEnabled] = useState(false);\n  const [youtubeMetrics, setYoutubeMetrics] = useState<Record<string, YouTubeMetricResult>>({});\n  const [youtubeLoadingId, setYoutubeLoadingId] = useState("");
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
+  const [youtubeMetrics, setYoutubeMetrics] = useState<Record<string, YouTubeMetricResult>>({});
+  const [youtubeLoadingId, setYoutubeLoadingId] = useState("");
   const firstLoad = useRef(true);
   const knownIds = useRef<Set<string>>(new Set());
 
