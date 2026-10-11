@@ -310,7 +310,8 @@ export default function TrendRadarPage() {
                     <div className={styles.topicActions} style={{ marginTop: 10 }}>
                       <a className={styles.smallBtn} href={item.url} target="_blank" rel="noreferrer">Open source ↗</a>
                       <a className={styles.smallBtn} href={`https://www.youtube.com/results?search_query=${encodeURIComponent(item.title)}`} target="_blank" rel="noreferrer">Check YouTube ↗</a>
-                      <a className={styles.smallBtn} href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(item.title)}`} target="_blank" rel="noreferrer">Check Instagram ↗</a>\n                      <button type="button" className={styles.smallBtn} onClick={() => void checkYouTube(item)} disabled={youtubeLoadingId === item.id}>{youtubeLoadingId === item.id ? "Checking YouTube…" : "YouTube activity"}</button>
+                      <a className={styles.smallBtn} href={`https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(item.title)}`} target="_blank" rel="noreferrer">Check Instagram ↗</a>
+                      <button type="button" className={styles.smallBtn} onClick={() => void checkYouTube(item)} disabled={youtubeLoadingId === item.id}>{youtubeLoadingId === item.id ? "Checking YouTube…" : "YouTube activity"}</button>
                       <button type="button" className={styles.smallBtn} onClick={() => setSelected(item)}>Generate ideas</button>
                       <button type="button" className={`${styles.smallBtn} ${savedIds.includes(item.id) ? styles.smallBtnSaved : ""}`} onClick={() => toggleSaved(item)}>{savedIds.includes(item.id) ? "★ Saved" : "☆ Save"}</button>
                     </div>
