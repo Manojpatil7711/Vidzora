@@ -312,7 +312,7 @@ export default function TrendRadarPage() {
               {selected && <div className={styles.ideaList}>
                 <div className={styles.idea}><div className={styles.ideaLabel}>Selected topic</div><p className={styles.ideaText}>{selected.title}</p><a className={styles.smallBtn} style={{ marginTop: 10 }} href={selected.url} target="_blank" rel="noreferrer">Verify source ↗</a></div>
                 {ideas.map((idea) => <div className={styles.idea} key={idea.label}><div className={styles.ideaLabel}>{idea.label}</div><p className={styles.ideaText}>{idea.text}</p></div>)}
-                <button type="button" className={styles.secondary} onClick={() => { void navigator.clipboard?.writeText(ideas.map((idea) => `${idea.label}: ${idea.text}`).join("\n\n")); }}>Copy idea pack</button>
+                <button type="button" className={styles.secondary} onClick={() => { const text = ideas.map((idea) => `${idea.label}: ${idea.text}`).join("\n\n"); if (navigator.clipboard?.writeText) void navigator.clipboard.writeText(text).catch(() => setError("Could not copy ideas. Select and copy the text manually.")); }}>Copy idea pack</button>
                 <button type="button" className={styles.secondary} onClick={() => setSelected(null)}>Clear selection</button>
               </div>}
               {!selected && <div className={styles.notice}>Idea generation uses built-in templates in this no-key beta. AI-written scripts can be added after a free, sustainable provider is verified.</div>}
