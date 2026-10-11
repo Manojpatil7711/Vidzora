@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Vidzora — Fast Social Video Downloader",
     description:
-      "Download publicly accessible social videos with a fast, clean and mobile-first experience.",
+      "Download publicly accessible videos from supported social platforms with a fast, clean and mobile-first experience. YouTube support is currently paused.",
     url: siteUrl,
     siteName: "Vidzora",
     type: "website"
