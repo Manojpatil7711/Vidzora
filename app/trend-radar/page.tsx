@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./trend-radar.module.css";
 
 type TrendItem = {
@@ -183,7 +183,7 @@ export default function TrendRadarPage() {
     }
   }
 
-  function addInterest(event: React.FormEvent<HTMLFormElement>) {
+  function addInterest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = interestInput.trim();
     if (!value) return;
