@@ -75,7 +75,7 @@ function parseRss(xml: string, kind: SourceKind, country: string, language: stri
     const source = tag(block, "source") || (kind === "google-trends" ? "Google Trends" : "Google News");
     const published = pubDate && !Number.isNaN(Date.parse(pubDate)) ? new Date(pubDate).toISOString() : null;
     return {
-      id: `${kind}-${country}-${index}-${encodeURIComponent(title.slice(0, 48))}`,
+      id: `${kind}-${country}-${encodeURIComponent(title.toLocaleLowerCase().slice(0, 80))}`,
       title,
       url: link,
       source,
