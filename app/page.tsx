@@ -185,10 +185,9 @@ export default function Home() {
       </header>
 
       <section className="hero">
-        <div className="downloaderBanner"><AdUnit variant="leaderboard" /></div>
-        <div className="eyebrow">FAST • PRIVATE • SIMPLE</div>
-        <h1>Download social videos<br/><em>fast, clean, simple.</em></h1>
-        <p className="sub">One downloader for public videos across major social and video platforms.</p>
+        <div className="eyebrow"><span className="liveDot" /> YOUR SIMPLE MEDIA WORKSPACE</div>
+        <h1>Download public videos<br/><em>without the clutter.</em></h1>
+        <p className="sub">Paste a link, review the available formats, and choose what works for you — in a clean experience built for mobile and desktop.</p>
 
         <form onSubmit={submit} className="search">
           <div className="inputWrap">
@@ -200,6 +199,11 @@ export default function Home() {
           <button className="downloadBtn" disabled={loading} type="submit">{loading ? "Preparing…" : "Download"}</button>
         </form>
 
+        <div className="trustStrip" aria-label="Vidzora benefits">
+          <span><b>✓</b> No account required</span>
+          <span><b>✓</b> Clear format choices</span>
+          <span><b>✓</b> Mobile-friendly</span>
+        </div>
         <div className="platforms" aria-label="Supported platforms">
           {platforms.map((p) => (
             <button
@@ -222,8 +226,6 @@ export default function Home() {
             </button>
           ))}
         </div>
-        <div className="heroAdRail"><AdUnit variant="rail" /></div>
-
         {error && <div className="notice error">{error}</div>}
 
         {result && <div className="result" ref={resultRef}>
@@ -267,13 +269,14 @@ export default function Home() {
           <p className="microcopy downloadNote">Download starts immediately. Ads never replace or block your download.</p>
           <button className="again" onClick={() => { setResult(null); setUrl(""); setSelectedFormat(null); }}>Download another</button>
         </div>}
+        <div className="downloaderBanner belowFoldAd"><AdUnit variant="leaderboard" /></div>
       </section>
 
       <section id="free-tools" className="section homeFreeTools">
         <div>
-          <div className="eyebrow">FREE TOOLS</div>
-          <h2>More free tools, right here.</h2>
-          <p className="microcopy">Compress, convert, crop, resize and work with PDFs without an account.</p>
+          <div className="eyebrow">THE CREATOR TOOLKIT</div>
+          <h2>Everything else you need, in one place.</h2>
+          <p className="microcopy">Compress, convert, crop, resize and work with PDFs using simple browser-based tools.</p>
           <a className="freeToolsCta" href="/tools">View all free tools →</a>
         </div>
         <div className="homeToolCards">
@@ -315,9 +318,7 @@ export default function Home() {
         </div>
       </section>
 
-      <div style={{position:"fixed",right:"12px",bottom:"10px",zIndex:20,maxWidth:"320px",fontSize:"10px",lineHeight:1.4,textAlign:"right",opacity:0.62}}>
-        <span>Vidzora is a tool for publicly accessible content. Users are responsible for ensuring they have the necessary rights or permission to download and use content.</span>
-      </div>
+      <p className="responsibleUse">Use Vidzora only for content you own or are authorized to save.</p>
 
       <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
 
