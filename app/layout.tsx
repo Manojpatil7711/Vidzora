@@ -6,11 +6,11 @@ const siteUrl = "https://vidzora-pi.vercel.app";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Vidzora — Fast Social Video Downloader",
+    default: "Free Social Video Downloader & Online File Tools | Vidzora",
     template: "%s | Vidzora"
   },
   description:
-    "Vidzora is a fast, mobile-friendly downloader for publicly accessible videos from supported social platforms. YouTube downloads are currently paused, and availability varies by platform.",
+    "Download publicly accessible social videos in available MP4 or audio formats, and use free online tools to compress images, convert files and work with PDFs. No account required; support varies by platform.",
   keywords: [
     "video downloader",
     "social video downloader",
@@ -23,16 +23,16 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: siteUrl + "/" },
   openGraph: {
-    title: "Vidzora — Fast Social Video Downloader",
+    title: "Free Social Video Downloader & Online File Tools | Vidzora",
     description:
-      "Download publicly accessible videos from supported social platforms with a fast, clean and mobile-first experience. YouTube support is currently paused.",
+      "Get available MP4 or audio downloads for supported public video links, plus free browser-based image and PDF tools. No account required; platform availability varies.",
     url: siteUrl,
     siteName: "Vidzora",
     type: "website"
   },
   twitter: {
     card: "summary",
-    title: "Vidzora — Fast Social Video Downloader",
+    title: "Free Social Video Downloader & Online File Tools | Vidzora",
     description:
       "Fast, clean and mobile-friendly public video downloader."
   },
