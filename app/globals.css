@@ -98,3 +98,78 @@ footer{max-width:1100px;margin:auto;padding:35px 24px 50px;color:#666;display:fl
 .toolTrust b{font-weight:600}
 .toolPageAd{margin-top:20px}
 @media(max-width:640px){.videoControls,.videoMetadataGrid{grid-template-columns:1fr}.videoToolPreview{max-height:280px}.videoDropZone{min-height:112px}.toolTrust{gap:10px;font-size:.74rem}}
+
+/* Premium global landing-page polish: content first, ads below the main workflow */
+:root{color-scheme:dark}
+body{background:#07090b;color:#f6f7f5}
+main{background:radial-gradient(ellipse at 50% -16%,rgba(156,255,87,.105),transparent 38%),radial-gradient(ellipse at 90% 26%,rgba(67,108,255,.07),transparent 28%),#07090b}
+.nav{border-bottom-color:rgba(255,255,255,.075);backdrop-filter:blur(14px)}
+.brand{font-size:25px;letter-spacing:-1.25px}
+.hero{max-width:1080px;padding:76px 20px 54px;position:relative}
+.hero:before{content:"";position:absolute;z-index:0;pointer-events:none;top:90px;left:50%;transform:translateX(-50%);width:min(820px,90vw);height:430px;border-radius:50%;background:radial-gradient(ellipse,rgba(156,255,87,.055),transparent 68%);filter:blur(12px)}
+.hero>*{position:relative}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid rgba(156,255,87,.19);border-radius:999px;background:rgba(156,255,87,.045);color:#c3d6b5;font-size:10px;letter-spacing:.15em;margin-bottom:22px}
+.liveDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#9cff57;box-shadow:0 0 12px rgba(156,255,87,.7)}
+.hero h1{max-width:900px;font-size:clamp(44px,7.6vw,78px);letter-spacing:-3.8px;line-height:1.02;margin-bottom:20px}
+.hero h1 em{background:linear-gradient(100deg,#a4ff67 5%,#d4ffc0 58%,#8bb5ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{max-width:640px;color:#b0b5b0;font-size:16px;line-height:1.75;margin-bottom:28px}
+.search{max-width:800px;gap:9px;padding:7px;border:1px solid rgba(255,255,255,.1);border-radius:22px;background:rgba(17,20,18,.9);box-shadow:0 22px 70px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.035);backdrop-filter:blur(18px)}
+.inputWrap{height:60px;border:1px solid transparent;background:transparent;border-radius:14px;box-shadow:none;padding:0 13px}
+.inputWrap:focus-within{border-color:rgba(156,255,87,.3);background:rgba(255,255,255,.025)}
+.inputWrap input{min-width:0;font-size:15px}
+.inputWrap input::placeholder{color:#777f78}
+.downloadBtn{min-height:60px;border-radius:15px;font-size:14px;letter-spacing:.01em}
+.trustStrip{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:9px 20px;margin:19px auto 22px;color:#929a92;font-size:11px;font-weight:650}
+.trustStrip span{display:inline-flex;align-items:center;gap:6px}
+.trustStrip b{display:grid;place-items:center;width:16px;height:16px;border:1px solid rgba(156,255,87,.28);border-radius:50%;color:#b5ff8c;font-size:10px}
+.platforms{gap:8px;margin:0 auto 12px;max-width:790px}
+.platformLink{padding:8px 12px;border-color:rgba(255,255,255,.105);background:rgba(255,255,255,.035);color:#c7cec6;font-size:11px;font-weight:700}
+.platformLink:hover{background:rgba(156,255,87,.08);border-color:rgba(156,255,87,.42);color:#c7ffad;box-shadow:none}
+.platformPaused{opacity:.48}
+.notice,.result{border-color:rgba(255,255,255,.1);border-radius:22px;background:linear-gradient(145deg,rgba(22,26,22,.98),rgba(12,14,13,.98));box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.result{padding:22px}
+.result h2{font-size:21px;line-height:1.35;color:#f5f7f2}
+.format{border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.025);border-radius:15px;transition:border-color .18s ease,background .18s ease,transform .18s ease}
+.format:hover{transform:translateY(-1px);border-color:rgba(156,255,87,.35);background:rgba(156,255,87,.045)}
+.formatSelected{border-color:rgba(156,255,87,.55);background:rgba(156,255,87,.065)}
+.section{max-width:1160px;border-top-color:rgba(255,255,255,.075);padding-top:74px;padding-bottom:74px}
+.section h2{letter-spacing:-1.3px}
+.homeToolCards a,.steps article,.growthCards article{border-color:rgba(255,255,255,.085);background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018));border-radius:20px}
+.homeToolCards a{min-height:112px;padding:20px;box-shadow:inset 0 1px rgba(255,255,255,.025)}
+.homeToolCards strong{font-size:14px;letter-spacing:-.15px}
+.homeToolCards span{font-size:12px;color:#9ba29b}
+.steps article,.growthCards article{padding:23px}
+.steps article>b,.growthCards article>strong{color:#b7ff91}
+.faq details{border-bottom-color:rgba(255,255,255,.085)}
+.faq summary{font-weight:700}
+.faq details p{color:#a4aaa4;line-height:1.7}
+.freeToolsCta{border-color:rgba(156,255,87,.35);border-radius:13px;background:rgba(156,255,87,.07);transition:background .18s ease,transform .18s ease}
+.freeToolsCta:hover{background:rgba(156,255,87,.13);transform:translateY(-1px)}
+.belowFoldAd{margin-top:26px;opacity:.85}
+.responsibleUse{max-width:820px;margin:18px auto 0;color:#697169;font-size:10px;line-height:1.6;text-align:center}
+footer{border-top:1px solid rgba(255,255,255,.075);color:#818781}
+footer a:hover{color:#c8ffad}
+button,a,input{-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible{outline:2px solid #b5ff8c;outline-offset:3px}
+@media(max-width:700px){
+ .hero{padding:54px 16px 42px}
+ .hero:before{top:55px;height:350px}
+ .hero .eyebrow{font-size:9px;letter-spacing:.12em;margin-bottom:18px}
+ .hero h1{font-size:clamp(40px,11vw,58px);letter-spacing:-2.4px;line-height:1.04;margin-bottom:17px}
+ .sub{font-size:14px;line-height:1.7;margin-bottom:23px}
+ .search{display:flex;flex-direction:column;gap:7px;padding:7px;border-radius:19px}
+ .inputWrap{height:54px;width:100%;padding:0 11px}
+ .inputWrap input{font-size:14px}
+ .downloadBtn{width:100%;min-height:54px;height:54px;border-radius:13px}
+ .trustStrip{gap:8px 12px;margin:15px auto 18px;font-size:10px}
+ .platforms{gap:7px;margin-bottom:8px}
+ .platformLink{padding:8px 10px;font-size:10px}
+ .result{padding:16px;border-radius:18px}
+ .section{padding:48px 18px;gap:24px}
+ .section h2{font-size:30px;line-height:1.12}
+ .homeToolCards{gap:9px}
+ .homeToolCards a{min-height:96px;padding:17px;border-radius:16px}
+ .steps article,.growthCards article{padding:19px;border-radius:16px}
+ .belowFoldAd{margin-top:18px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
