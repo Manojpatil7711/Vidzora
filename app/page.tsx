@@ -181,7 +181,7 @@ export default function Home() {
     <main>
       <header className="nav">
         <a className="brand" href="/">Vidzora<span>•</span></a>
-        <nav className="mainNav"><div className="navPrimary"><a className="homeDownloaderLink" href="/"><strong>DOWNLOADER</strong></a><a className="homeToolsLink" href="/tools"><strong>FREE TOOLS</strong><small>Compress • Convert • PDF • Crop</small></a></div><div className="navInfo"><a href="#how">How it works <span>↘</span></a><a href="#faq">FAQ <span>↘</span></a></div></nav>
+        <nav className="mainNav"><div className="navPrimary"><a className="homeDownloaderLink" href="/"><strong>DOWNLOADER</strong></a><a className="homeToolsLink" href="/tools"><strong>FREE TOOLS</strong><small>Compress • Convert • PDF • Crop</small></a><a className="homeToolsLink" href="/trend-radar"><strong>TREND RADAR</strong><small>Find your next topic</small></a></div><div className="navInfo"><a href="#how">How it works <span>↘</span></a><a href="#faq">FAQ <span>↘</span></a></div></nav>
       </header>
 
       <section className="hero">
