@@ -57,11 +57,8 @@ function AdUnit({ variant }: { variant: "leaderboard" | "rail" | "native" }) {
     }
   }, [variant]);
 
-  return (
-    <div ref={ref} className={`adSlot adSlot--${variant}`} aria-label="Advertisement">
-      <span className="adLabel">ADVERTISEMENT</span>
-    </div>
-  );
+  // Temporarily hide ad slots so ads cannot be confused with download controls.
+  return null;
 }
 
 function isAudio(f: Format) {
