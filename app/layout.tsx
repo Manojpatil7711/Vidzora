@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "Free Social Video Downloader & Online File Tools | Vidzora",
     description:
       "Get available MP4 or audio downloads for supported public video links, plus free browser-based image and PDF tools. No account required; platform availability varies.",
-    url: siteUrl,
+    url: siteUrl + "/",
     siteName: "Vidzora",
     type: "website"
   },
@@ -49,7 +49,7 @@ export default function RootLayout({
       {
         "@type": "WebSite",
         "@id": siteUrl + "/#website",
-        "url": siteUrl,
+        "url": siteUrl + "/",
         "name": "Vidzora",
         "description": "Fast social video downloader for publicly accessible media."
       },
@@ -57,7 +57,7 @@ export default function RootLayout({
         "@type": "WebApplication",
         "@id": siteUrl + "/#app",
         "name": "Vidzora",
-        "url": siteUrl,
+        "url": siteUrl + "/",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": "Web",
         "isAccessibleForFree": true,
