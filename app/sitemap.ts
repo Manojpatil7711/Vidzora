@@ -22,16 +22,13 @@ const tools = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
-
   return [
-    { url: base, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: base + "/tools", lastModified: now, changeFrequency: "weekly", priority: 0.9 },
-    { url: base + "/privacy", lastModified: now, changeFrequency: "yearly", priority: 0.4 },
-    { url: base + "/terms", lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: base + "/", changeFrequency: "weekly", priority: 1 },
+    { url: base + "/tools", changeFrequency: "weekly", priority: 0.9 },
+    { url: base + "/privacy", changeFrequency: "yearly", priority: 0.4 },
+    { url: base + "/terms", changeFrequency: "yearly", priority: 0.4 },
     ...tools.map((tool) => ({
       url: base + "/tools/" + tool,
-      lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.8
     }))
