@@ -80,12 +80,7 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9655050547873870"
           crossOrigin="anonymous"
         />
-        <script
-          async
-          src="https://al5sm.com/tag.min.js"
-          data-zone="11936478"
-        />
-      </head>
+</head>
       <body>
         {children}
         <script
