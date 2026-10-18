@@ -52,6 +52,18 @@ export default function Tools(){
       <p>Compress images • Convert formats • Create & merge PDFs • Crop & resize — with ready-made social banner sizes, directly in your browser.</p>
     </section>
 
+    <section className="categoryGrid" aria-label="Browse tools by category">
+      <Link className="categoryCard" href="/tools/category/image">
+        <span aria-hidden="true">▧</span><div><h2>Image Tools</h2><p>Compress, resize, crop and convert images.</p></div><b>Explore →</b>
+      </Link>
+      <Link className="categoryCard" href="/tools/category/video">
+        <span aria-hidden="true">▶</span><div><h2>Video Tools</h2><p>Extract frames, inspect metadata and create GIFs.</p></div><b>Explore →</b>
+      </Link>
+      <Link className="categoryCard" href="/tools/category/pdf">
+        <span aria-hidden="true">▤</span><div><h2>PDF Tools</h2><p>Convert pages, compress files and merge documents.</p></div><b>Explore →</b>
+      </Link>
+    </section>
+
     <ToolsAd variant="leaderboard" />
 
     <div className="toolsContentFrame">
