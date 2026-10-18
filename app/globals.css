@@ -173,3 +173,16 @@ button:focus-visible,a:focus-visible{outline:2px solid #b5ff8c;outline-offset:3p
  .belowFoldAd{margin-top:18px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
+
+/* Category landing cards: responsive, high-contrast navigation */
+.categoryGrid{width:min(1100px,calc(100% - 40px));margin:0 auto 36px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.categoryCard{min-width:0;display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;align-items:start;padding:20px;border:1px solid #2b2b2b;border-radius:18px;background:linear-gradient(145deg,#151515,#0e0e0e);transition:border-color .15s ease,transform .15s ease,background .15s ease}
+.categoryCard>span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#18230f;color:#9cff57;font-size:22px;font-weight:900}
+.categoryCard h2{margin:1px 0 7px;font-size:17px;letter-spacing:-.3px;color:#f5f5f0}
+.categoryCard p{margin:0;color:#a0a0a0;font-size:13px;line-height:1.55}
+.categoryCard b{grid-column:2;color:#9cff57;font-size:12px;margin-top:4px}
+.categoryCard:hover{border-color:#719e4f;background:linear-gradient(145deg,#192016,#101010);transform:translateY(-2px)}
+.categoryCard:focus-visible{outline:2px solid #9cff57;outline-offset:3px}
+.toolsInfo ul{color:#a9a9a9;line-height:1.8;padding-left:22px}
+@media(max-width:760px){.categoryGrid{grid-template-columns:1fr;width:calc(100% - 32px);gap:10px}.categoryCard{padding:17px}.categoryCard h2{font-size:16px}}
