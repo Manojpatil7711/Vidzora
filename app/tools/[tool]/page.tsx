@@ -28,6 +28,60 @@ const data={
 
 
 const seoGuides: Record<string, { intro: string; steps: string[]; tips: string[]; faqs: [string,string][] }> = {
+  "image-size-reducer": {
+    intro: "Vidzora Image Size Reducer helps you optimize a JPG, PNG or WebP image toward a chosen file-size target. It is useful for online forms and uploads with KB or MB limits. The browser adjusts image encoding and, when needed, dimensions; because image content and browser encoders vary, always check the downloaded file size before submitting it.",
+    steps: ["Choose a JPG, PNG or WebP image from your device.", "Enter a target size and choose KB or MB. Use a realistic target for the image.", "Generate the optimized WebP file, then check its actual size and appearance before uploading it."],
+    tips: ["A very small target may require lower quality or smaller dimensions.", "The output is WebP, so check that the website or form accepts WebP before submitting.", "Keep the original image as a backup and verify the final file size; an exact target cannot be guaranteed for every image."],
+    faqs: [["Does it guarantee the exact KB size?", "No. The tool optimizes toward the requested size, but browser encoding and image content can affect the final result. Check the downloaded file."], ["Which output format is created?", "The current tool exports an optimized WebP image."], ["Can I use it for an upload size limit?", "Yes. It is designed for this workflow, but confirm both the final size and the destination's accepted formats before uploading."]]
+  },
+  "image-converter": {
+    intro: "Vidzora JPG PNG WebP Converter changes a supported image into JPG, PNG or WebP in your browser. It is useful when a website, app or design workflow requires a particular image format. You can choose the output format and download a separate converted copy without an account.",
+    steps: ["Choose a supported image from your device.", "Select JPG, PNG or WebP as the output format.", "Generate the converted image and open it to verify that it looks correct."],
+    tips: ["Use PNG when transparency is important; JPG does not preserve transparent pixels.", "WebP can be a practical choice for web images, but confirm that your destination supports it.", "Keep the original file if you may need its original quality or transparency later."],
+    faqs: [["Which formats can I export?", "The tool offers JPG, PNG and WebP output."], ["Will transparency be preserved?", "PNG and WebP can support transparency; JPG does not. Check the result if the source has a transparent background."], ["Is the image uploaded?", "The conversion is designed to run locally in your browser."]]
+  },
+  "video-frame-extractor": {
+    intro: "Vidzora Video Frame Extractor captures a still image from a browser-supported video at a timestamp you choose. It can help create reference images, presentation stills or a precise frame for editing. The source video is processed locally, and the captured image can be saved as JPG or PNG.",
+    steps: ["Choose a video file that your browser can play.", "Enter the timestamp in seconds and choose JPG or PNG output.", "Capture the frame and download the resulting image; preview it to confirm the intended moment."],
+    tips: ["Use seconds for the timestamp and keep it within the video's duration.", "If a frame fails to decode, try a different timestamp or a browser-supported video format.", "Very large source dimensions may be scaled down to keep processing manageable."],
+    faqs: [["Can I capture an exact moment?", "Yes. Enter the timestamp and the tool seeks to that position before capturing the frame."], ["Which image formats are available?", "The tool can save a captured frame as JPG or PNG."], ["Does the video leave my device?", "The tool is designed for local browser processing and does not upload the source video."]]
+  },
+  "video-thumbnail-extractor": {
+    intro: "Vidzora Video Thumbnail Extractor creates a still image from a browser-supported video for previews, drafts and visual references. It selects a point within the video and lets you save the captured frame as an image. Processing happens in the browser, so the source file does not need to be uploaded.",
+    steps: ["Select a video file supported by your browser.", "Load the preview and choose to create the thumbnail.", "Download the generated still image and check that it represents the video clearly."],
+    tips: ["Choose a clip with a clear subject and good lighting for a useful thumbnail.", "If the automatically selected frame is not ideal, use Video Frame Extractor to capture a specific timestamp.", "Check the image dimensions before using it on a platform with a required thumbnail size."],
+    faqs: [["How is the thumbnail selected?", "The tool captures a still from within the video, approximately one-third of the way through."], ["Can I choose a specific timestamp?", "For precise timestamp selection, use the related Video Frame Extractor."], ["Is the source uploaded?", "The source video is processed locally in the browser."]]
+  },
+  "video-metadata": {
+    intro: "Vidzora Video Metadata Viewer displays basic details available from a local video file, including file size, duration, dimensions and media type. It is useful for checking a clip before editing, sharing or converting it. Details depend on what the browser can read from the selected file.",
+    steps: ["Choose a video file supported by your browser.", "Review the file size, duration, dimensions and media type displayed.", "Use the details to decide whether the clip is suitable for your next workflow."],
+    tips: ["The tool reports browser-readable details; it is not a full forensic metadata extractor.", "Frame-rate information may not be available for every file or browser.", "If the video cannot be read, try a common browser-supported format and keep the original file unchanged."],
+    faqs: [["What information can I check?", "The tool displays basic file details such as size, duration, dimensions and media type; some additional details may depend on browser support."], ["Does it modify my video?", "No conversion is required to inspect the metadata."], ["Does the video upload to a server?", "The tool reads the selected file locally in your browser."]]
+  },
+  "video-audio-extractor": {
+    intro: "Vidzora Video Audio Extractor records the playable audio stream from a compatible video in your browser and creates a downloadable audio file. It can be useful when you need an audio-only copy of a video you are authorized to process. Browser support and the source codec can affect whether extraction succeeds.",
+    steps: ["Choose a compatible video file from your device.", "Start audio extraction and allow the clip to play through while the browser records the audio.", "Download the generated audio file and test playback before using it."],
+    tips: ["Long videos take longer because extraction plays through the clip in real time.", "Try a shorter clip if your mobile browser runs low on memory or stops processing.", "Only extract audio from material you own or have permission to use."],
+    faqs: [["Is the audio extracted instantly?", "No. The video plays during extraction, so processing can take about as long as the clip."], ["What kind of file is created?", "The tool creates browser-recorded WebM/Opus audio when supported."], ["Why might extraction fail?", "Unsupported codecs, browser limitations or device resource constraints can prevent processing."]]
+  },
+  "video-converter-compressor": {
+    intro: "Vidzora Video Converter & Compressor converts compatible videos to WebM in the browser and offers low, medium and high output-quality settings. It is useful when you need a WebM copy or want to experiment with a smaller output. Actual size and quality depend on the source, selected settings and browser capabilities.",
+    steps: ["Choose a browser-supported video file within the tool's size limit.", "Select a low, medium or high quality setting based on your needs.", "Run the conversion, then download and play the WebM output to verify video and audio."],
+    tips: ["Low quality may create a smaller file but can reduce detail.", "Conversion runs locally and can be resource-intensive, especially for long videos on a phone.", "The result is WebM, not MP4; confirm your destination supports WebM before replacing or sharing a file."],
+    faqs: [["Which output format is created?", "The tool creates WebM video when the browser supports the required recording APIs."], ["Will the output always be smaller?", "No. The output size depends on the source and selected quality settings; compare the files after conversion."], ["Why is conversion unavailable?", "Some browsers do not support the necessary MediaRecorder or canvas capture features."]]
+  },
+  "video-gif-creator": {
+    intro: "Vidzora Video to GIF Creator turns a short section of a browser-supported video into an animated GIF. You can set the clip's start and end, frame rate, output width, color palette and looping behavior. To keep processing practical on mobile devices, the tool limits clips to 12 seconds and the output to 180 frames.",
+    steps: ["Choose a video file and wait for its preview and duration to load.", "Set the start and end times, then adjust FPS, width, colors and looping as needed.", "Create the GIF, review the preview and download the result when it is ready."],
+    tips: ["Shorter clips, lower FPS and narrower output widths usually reduce processing time and file size.", "A GIF uses a limited color palette, so gradients and photographic detail may look different from the source video.", "Keep the selected range within 12 seconds and avoid settings that exceed the frame limit."],
+    faqs: [["How long can the GIF clip be?", "The current tool limits a GIF selection to 12 seconds."], ["Can I control the GIF size and motion?", "Yes. You can adjust width, frame rate and color count, and choose whether it loops."], ["What is the source file size limit?", "The tool accepts video files up to 500 MB, although smaller files are generally easier to process on mobile devices."]]
+  },
+  "subtitle-converter": {
+    intro: "Vidzora Subtitle Converter changes subtitle text between SubRip (.srt) and WebVTT (.vtt) formats in your browser. It is useful when a video player or publishing platform expects a different subtitle format. You can load a subtitle file, review or edit its text, choose the output format and download the converted copy.",
+    steps: ["Choose an SRT or VTT subtitle file from your device.", "Select WebVTT or SRT as the output format and review the editable text preview.", "Convert and download the new subtitle file, then check its timing and cue text in your target player."],
+    tips: ["Keep a copy of the original subtitle file before conversion.", "Conversion adjusts common timestamp punctuation and format headers; complex or unusual subtitle syntax may need manual review.", "Check that the subtitles remain synchronized with the correct video after conversion."],
+    faqs: [["Which formats are supported?", "The tool converts between SubRip (.srt) and WebVTT (.vtt)."], ["Can I edit subtitles before downloading?", "Yes. The subtitle text preview is editable before conversion."], ["Are subtitle files uploaded?", "The file text is read and converted locally in your browser."]]
+  },
   "image-compressor": {
     intro: "Vidzora Image Compressor is a free browser-based image compression tool for JPG, PNG and WebP files. It is useful when an image is too large for a website upload, email attachment, online form or social post. The file is processed in your browser, so you can reduce the size without creating an account or sending the source image to a remote upload service.",
     steps: ["Choose a JPG, PNG or WebP image from your phone or computer.", "Adjust the quality setting until the preview and expected file size are suitable.", "Generate the compressed image and download the result. Keep the original if you need the highest-quality copy."],
