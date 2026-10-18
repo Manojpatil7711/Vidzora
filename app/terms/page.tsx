@@ -1,1 +1,20 @@
-export const metadata={title:"Terms of Use"}; export default function Terms(){return <main className="legal"><a href="/">← Vidzora</a><h1>Terms of Use</h1><p>Use Vidzora only for content you are authorized to access and download. Respect the terms, copyright and privacy rights of each platform and content owner.</p><h2>Availability</h2><p>Download availability can change because third-party platforms and processing providers can change their systems. Vidzora does not guarantee that every public URL will work.</p><h2>Acceptable use</h2><p>Do not use the service for unlawful activity, abuse, automated high-volume requests, or content you do not have permission to download.</p></main>}
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms of Use",
+  description: "Review Vidzora's terms for authorized downloads, third-party availability and acceptable use of its online tools.",
+  alternates: { canonical: "/terms" },
+  robots: { index: true, follow: true }
+};
+
+export default function Terms() {
+  return <main className="legal">
+    <a href="/">← Vidzora</a>
+    <h1>Terms of Use</h1>
+    <p>Use Vidzora only for content you are authorized to access and download. Respect the terms, copyright and privacy rights of each platform and content owner.</p>
+    <h2>Availability</h2>
+    <p>Download availability can change because third-party platforms and processing providers can change their systems. Vidzora does not guarantee that every public URL will work.</p>
+    <h2>Acceptable use</h2>
+    <p>Do not use the service for unlawful activity, abuse, automated high-volume requests, or content you do not have permission to download.</p>
+  </main>;
+}
