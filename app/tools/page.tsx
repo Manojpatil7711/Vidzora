@@ -21,8 +21,8 @@ const tools=[
 ] as const;
 
 export const metadata={
-  title:"Free Online Tools",
-  description:"Free browser-based image and PDF tools for compressing, resizing, converting, cropping and merging files."
+  title:"Free Online Image, Video & PDF Tools",
+  description:"Free browser-based image, video and PDF tools to compress, resize, convert, crop, extract video frames and merge documents."
 };
 
 export default function Tools(){
@@ -36,6 +36,18 @@ export default function Tools(){
       <div className="eyebrow">Vidzora • FREE TOOLS</div>
       <h1>Free tools.<br/><em>Fast, private, simple.</em></h1>
       <p>Compress images • Convert formats • Create & merge PDFs • Crop & resize — with ready-made social banner sizes, directly in your browser.</p>
+    </section>
+
+    <section className="categoryGrid" aria-label="Browse tools by category">
+      <Link className="categoryCard" href="/tools/category/image">
+        <span aria-hidden="true">▧</span><div><h2>Image Tools</h2><p>Compress, resize, crop and convert images.</p></div><b>Explore →</b>
+      </Link>
+      <Link className="categoryCard" href="/tools/category/video">
+        <span aria-hidden="true">▶</span><div><h2>Video Tools</h2><p>Extract frames, inspect metadata and create GIFs.</p></div><b>Explore →</b>
+      </Link>
+      <Link className="categoryCard" href="/tools/category/pdf">
+        <span aria-hidden="true">▤</span><div><h2>PDF Tools</h2><p>Convert pages, compress files and merge documents.</p></div><b>Explore →</b>
+      </Link>
     </section>
 
     <ToolsAd variant="leaderboard" />
