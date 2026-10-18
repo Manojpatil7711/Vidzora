@@ -1,1 +1,22 @@
-export const metadata={title:"Privacy Policy"}; export default function Privacy(){return <main className="legal"><a href="/">← Vidzora</a><h1>Privacy Policy</h1><p>Vidzora is a web tool for processing public social video links. We do not offer user accounts, personal download history, or a permanent video library.</p><h2>Links and processing</h2><p>A submitted URL may be sent to the selected processing provider so a downloadable result can be prepared. Provider and hosting logs may exist according to their policies.</p><h2>Cookies and advertising</h2><p>If advertising is enabled, advertising partners may use their own technologies subject to their policies. Do not submit private or sensitive URLs.</p><h2>Contact</h2><p>For privacy questions, use the contact method published on the website.</p></main>}
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "Read how Vidzora handles submitted links, browser-based file processing, hosting logs and advertising technologies.",
+  alternates: { canonical: "/privacy" },
+  robots: { index: true, follow: true }
+};
+
+export default function Privacy() {
+  return <main className="legal">
+    <a href="/">← Vidzora</a>
+    <h1>Privacy Policy</h1>
+    <p>Vidzora is a web tool for processing public social video links. We do not offer user accounts, personal download history, or a permanent video library.</p>
+    <h2>Links and processing</h2>
+    <p>A submitted URL may be sent to the selected processing provider so a downloadable result can be prepared. Provider and hosting logs may exist according to their policies.</p>
+    <h2>Cookies and advertising</h2>
+    <p>If advertising is enabled, advertising partners may use their own technologies subject to their policies. Do not submit private or sensitive URLs.</p>
+    <h2>Contact</h2>
+    <p>For privacy questions, use the contact method published on the website.</p>
+  </main>;
+}
