@@ -21,8 +21,22 @@ const tools=[
 ] as const;
 
 export const metadata={
-  title:"Free Online Tools",
-  description:"Free browser-based image and PDF tools for compressing, resizing, converting, cropping and merging files."
+  title:"Free Online Image, Video & PDF Tools",
+  description:"Use free browser-based tools to compress and resize images, convert JPG, PNG and WebP, work with PDFs, extract video frames, inspect metadata and convert subtitles.",
+  alternates:{canonical:"/tools"},
+  openGraph:{
+    title:"Free Online Image, Video & PDF Tools | Vidzora",
+    description:"Compress and convert images, work with PDFs, and use browser-based video utilities without an account.",
+    url:"/tools",
+    siteName:"Vidzora",
+    type:"website"
+  },
+  twitter:{
+    card:"summary",
+    title:"Free Online Image, Video & PDF Tools | Vidzora",
+    description:"Free browser-based image, PDF and video utilities from Vidzora."
+  },
+  robots:{index:true,follow:true}
 };
 
 export default function Tools(){
@@ -36,6 +50,18 @@ export default function Tools(){
       <div className="eyebrow">Vidzora • FREE TOOLS</div>
       <h1>Free tools.<br/><em>Fast, private, simple.</em></h1>
       <p>Compress images • Convert formats • Create & merge PDFs • Crop & resize — with ready-made social banner sizes, directly in your browser.</p>
+    </section>
+
+    <section className="categoryGrid" aria-label="Browse tools by category">
+      <Link className="categoryCard" href="/tools/category/image">
+        <span aria-hidden="true">▧</span><div><h2>Image Tools</h2><p>Compress, resize, crop and convert images.</p></div><b>Explore →</b>
+      </Link>
+      <Link className="categoryCard" href="/tools/category/video">
+        <span aria-hidden="true">▶</span><div><h2>Video Tools</h2><p>Extract frames, inspect metadata and create GIFs.</p></div><b>Explore →</b>
+      </Link>
+      <Link className="categoryCard" href="/tools/category/pdf">
+        <span aria-hidden="true">▤</span><div><h2>PDF Tools</h2><p>Convert pages, compress files and merge documents.</p></div><b>Explore →</b>
+      </Link>
     </section>
 
     <ToolsAd variant="leaderboard" />
