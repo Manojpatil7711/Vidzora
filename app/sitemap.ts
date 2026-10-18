@@ -25,6 +25,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: base + "/", changeFrequency: "weekly", priority: 1 },
     { url: base + "/tools", changeFrequency: "weekly", priority: 0.9 },
+    { url: base + "/tools/category/image", changeFrequency: "weekly", priority: 0.8 },
+    { url: base + "/tools/category/video", changeFrequency: "weekly", priority: 0.8 },
+    { url: base + "/tools/category/pdf", changeFrequency: "weekly", priority: 0.8 },
     { url: base + "/privacy", changeFrequency: "yearly", priority: 0.4 },
     { url: base + "/terms", changeFrequency: "yearly", priority: 0.4 },
     ...tools.map((tool) => ({
