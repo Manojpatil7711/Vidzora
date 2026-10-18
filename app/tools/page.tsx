@@ -21,8 +21,22 @@ const tools=[
 ] as const;
 
 export const metadata={
-  title:"Free Online Tools",
-  description:"Free browser-based image and PDF tools for compressing, resizing, converting, cropping and merging files."
+  title:"Free Online Image, Video & PDF Tools",
+  description:"Use free browser-based tools to compress and resize images, convert JPG, PNG and WebP, work with PDFs, extract video frames, inspect metadata and convert subtitles.",
+  alternates:{canonical:"/tools"},
+  openGraph:{
+    title:"Free Online Image, Video & PDF Tools | Vidzora",
+    description:"Compress and convert images, work with PDFs, and use browser-based video utilities without an account.",
+    url:"/tools",
+    siteName:"Vidzora",
+    type:"website"
+  },
+  twitter:{
+    card:"summary",
+    title:"Free Online Image, Video & PDF Tools | Vidzora",
+    description:"Free browser-based image, PDF and video utilities from Vidzora."
+  },
+  robots:{index:true,follow:true}
 };
 
 export default function Tools(){
