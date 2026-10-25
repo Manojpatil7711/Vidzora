@@ -317,7 +317,7 @@ export default function Home() {
 
       <p className="responsibleUse">Use Vidzora only for content you own or are authorized to save.</p>
 
-      <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
+      <footer><span>© {new Date().getFullYear()} Vidzora</span><span><a href="/about">About</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built for speed. Use responsibly.</span></footer>
 
     </main>
   );
