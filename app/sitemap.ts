@@ -28,6 +28,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: base + "/tools/category/image", changeFrequency: "weekly", priority: 0.8 },
     { url: base + "/tools/category/video", changeFrequency: "weekly", priority: 0.8 },
     { url: base + "/tools/category/pdf", changeFrequency: "weekly", priority: 0.8 },
+    { url: base + "/about", changeFrequency: "monthly", priority: 0.5 },
+    { url: base + "/contact", changeFrequency: "monthly", priority: 0.5 },
     { url: base + "/privacy", changeFrequency: "yearly", priority: 0.4 },
     { url: base + "/terms", changeFrequency: "yearly", priority: 0.4 },
     ...tools.map((tool) => ({
