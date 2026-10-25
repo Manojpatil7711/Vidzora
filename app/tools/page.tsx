@@ -90,7 +90,7 @@ export default function Tools(){
 
     <footer>
       <span>© {new Date().getFullYear()} Vidzora</span>
-      <span><Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></span>
+      <span><Link href="/about">About</Link> · <Link href="/contact">Contact</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link></span>
     </footer>
   </main>;
 }
