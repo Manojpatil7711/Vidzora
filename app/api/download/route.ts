@@ -199,8 +199,18 @@ function normalizeSourceUrl(raw: string) {
 function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
   const formats: Array<{ label: string; url: string }> = [];
   const seen = new Set<string>();
+  const looksLikeImageUrl = (value: string) => {
+    try {
+      const parsed = new URL(value);
+      // Some extractors incorrectly label a cover/thumbnail URL as a video.
+      // Reject unmistakable image-file URLs so a bad provider can fail over.
+      return /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(parsed.pathname);
+    } catch {
+      return false;
+    }
+  };
   const add = (label: string, url: unknown) => {
-    if (typeof url !== "string" || !/^https?:\/\//i.test(url) || seen.has(url)) return;
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url) || seen.has(url) || looksLikeImageUrl(url)) return;
     seen.add(url);
     formats.push({ label, url });
   };
