@@ -206,12 +206,15 @@ function normalizeFormats(data: any, mode: "video" | "audio" = "video") {
   };
 
   if (data?.status === "picker" && Array.isArray(data.picker)) {
+    // This endpoint feeds the video/audio downloader, not an image gallery.
+    // Never offer carousel photos or GIF previews as downloadable video files:
+    // those URLs can resolve to image content and trigger /api/file's MIME guard.
     data.picker.forEach((item: any, index: number) => {
-      if (item?.type === "video") add("Video • Item " + (index + 1), item.url);
-      else if (item?.type === "photo") add("Photo • Item " + (index + 1), item.url);
-      else if (item?.type === "gif") add("GIF • Item " + (index + 1), item.url);
+      if (mode === "video" && item?.type === "video") {
+        add("Video • Item " + (index + 1), item.url);
+      }
     });
-    if (typeof data.audio === "string") add("Audio", data.audio);
+    if (mode === "audio" && typeof data.audio === "string") add("Audio • MP3", data.audio);
     return formats;
   }
 
