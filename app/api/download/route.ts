@@ -876,6 +876,49 @@ export async function POST(req: Request) {
       }
     }
 
+    // Instagram extractors can occasionally label a thumbnail URL as a video.
+    // Verify candidate media types before issuing download tokens. This is
+    // Instagram-only and fail-open: unsupported HEAD/range probes do not block
+    // a valid download; only a confirmed image response is removed.
+    if (result && platform === "Instagram" && mode === "video") {
+      const checkedFormats = await Promise.all(result.formats.map(async (format) => {
+        try {
+          let probe = await fetchWithTimeout(format.url, {
+            method: "HEAD",
+            redirect: "follow",
+            headers: {
+              accept: "video/*,image/*;q=0.2,*/*;q=0.1",
+              "user-agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/154.0 Mobile Safari/537.36"
+            }
+          }, 3500);
+          let type = probe.headers.get("content-type") || "";
+
+          if (!probe.ok || !type) {
+            probe = await fetchWithTimeout(format.url, {
+              method: "GET",
+              redirect: "follow",
+              headers: {
+                range: "bytes=0-0",
+                accept: "video/*,image/*;q=0.2,*/*;q=0.1",
+                "user-agent": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/154.0 Mobile Safari/537.36"
+              }
+            }, 3500);
+            type = probe.headers.get("content-type") || "";
+            try { await probe.body?.cancel(); } catch {}
+          }
+
+          if (type.toLowerCase().startsWith("image/")) return null;
+        } catch {
+          // Some short-lived provider URLs disallow probing. Keep them and let
+          // the existing download endpoint perform its normal MIME validation.
+        }
+        return format;
+      }));
+
+      result = { ...result, formats: checkedFormats.filter((format): format is { label: string; url: string } => Boolean(format)) };
+      if (!result.formats.length) result = null;
+    }
+
     if (!result) {
       const normalizedProviderError = lastProviderError.toLowerCase();
       if (platform === "Vimeo" && (normalizedProviderError.includes("error.api.fetch.fail") || normalizedProviderError.includes("vimeo"))) {
